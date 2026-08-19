@@ -638,12 +638,11 @@
         <thead><tr><th>Metric</th><th class="r">Closed</th><th class="r">Ongoing</th><th class="r">Δ</th></tr></thead>
         <tbody>
           <tr><td class="lbl">Duration</td><td class="r">188.1 d</td><td class="r" id="cmpDuration">—</td><td class="r delta" id="cmpDurationD">—</td></tr>
-          <tr><td class="lbl">Grid P&amp;L</td><td class="r">+36.92</td><td class="r" id="cmpGrid">—</td><td class="r delta" id="cmpGridD">—</td></tr>
-          <tr><td class="lbl">Floating P&amp;L</td><td class="r">−186.31</td><td class="r" id="cmpFloat">—</td><td class="r delta" id="cmpFloatD">—</td></tr>
-          <tr><td class="lbl">Total P&amp;L (USDT)</td><td class="r">−149.38</td><td class="r" id="cmpTotal">—</td><td class="r delta" id="cmpTotalD">—</td></tr>
-          <tr><td class="lbl">Total P&amp;L (%)</td><td class="r">−16.43%</td><td class="r" id="cmpTotalPct">—</td><td class="r delta" id="cmpTotalPctD">—</td></tr>
+          <tr><td class="lbl">Grid P&amp;L</td><td class="r">+4.05%</td><td class="r" id="cmpGrid">—</td><td class="r delta" id="cmpGridD">—</td></tr>
+          <tr><td class="lbl">Floating P&amp;L</td><td class="r">−20.49%</td><td class="r" id="cmpFloat">—</td><td class="r delta" id="cmpFloatD">—</td></tr>
+          <tr><td class="lbl">Total P&amp;L</td><td class="r">−16.43%</td><td class="r" id="cmpTotalPct">—</td><td class="r delta" id="cmpTotalPctD">—</td></tr>
           <tr><td class="lbl">Annualized Yield</td><td class="r">−31.87%</td><td class="r" id="cmpAnn">—</td><td class="r delta" id="cmpAnnD">—</td></tr>
-          <tr><td class="lbl">Ending Balance</td><td class="r">760.22</td><td class="r" id="cmpBalance">—</td><td class="r delta" id="cmpBalanceD">—</td></tr>
+          <tr><td class="lbl">Ending Balance</td><td class="r">83.57%</td><td class="r" id="cmpBalance">—</td><td class="r delta" id="cmpBalanceD">—</td></tr>
         </tbody>
       </table>
       <div class="note" id="cmpVerdict">Waiting on live data to compute the comparison…</div>
@@ -840,20 +839,21 @@
     const totalDaysOpen = DURATION_DAYS_CLOSED + Math.max(0, v.extraDays);
     document.getElementById('cmpDuration').textContent = fmtPlain(totalDaysOpen,1)+' d';
     document.getElementById('cmpDurationD').textContent = fmt(Math.max(0, v.extraDays),1)+' d';
-    document.getElementById('cmpGrid').textContent = fmt(v.newGridProfit);
-    document.getElementById('cmpGridD').textContent = fmt(v.newGridProfit - GRID_PROFIT_CLOSED);
-    document.getElementById('cmpFloat').textContent = fmt(v.newFloat);
-    document.getElementById('cmpFloatD').textContent = fmt(v.newFloat - FLOAT_AT_STOP);
-    document.getElementById('cmpTotal').textContent = fmt(v.newTotal);
-    document.getElementById('cmpTotalD').textContent = fmt(v.newTotal - (-149.38));
+    const ogGridPct = v.newGridProfit / INVESTMENT * 100;
+    const ogFloatPct = v.newFloat / INVESTMENT * 100;
+    const ogBalancePct = v.newBalance / INVESTMENT * 100;
+    document.getElementById('cmpGrid').textContent = fmt(ogGridPct)+'%';
+    document.getElementById('cmpGridD').textContent = fmt(ogGridPct - 4.05)+' pts';
+    document.getElementById('cmpFloat').textContent = fmt(ogFloatPct)+'%';
+    document.getElementById('cmpFloatD').textContent = fmt(ogFloatPct - (-20.49))+' pts';
     document.getElementById('cmpTotalPct').textContent = fmt(v.newTotalPct)+'%';
     document.getElementById('cmpTotalPctD').textContent = fmt(v.newTotalPct - (-16.43))+' pts';
     document.getElementById('cmpAnn').textContent = fmt(v.newAnnualized)+'%';
     document.getElementById('cmpAnnD').textContent = fmt(v.newAnnualized - (-31.87))+' pts';
-    document.getElementById('cmpBalance').textContent = fmtPlain(v.newBalance);
-    document.getElementById('cmpBalanceD').textContent = fmt(v.newBalance - 760.22);
+    document.getElementById('cmpBalance').textContent = fmt(ogBalancePct)+'%';
+    document.getElementById('cmpBalanceD').textContent = fmt(ogBalancePct - 83.57)+' pts';
 
-    ['cmpDurationD','cmpGridD','cmpFloatD','cmpTotalD','cmpTotalPctD','cmpAnnD','cmpBalanceD'].forEach(id=>{
+    ['cmpDurationD','cmpGridD','cmpFloatD','cmpTotalPctD','cmpAnnD','cmpBalanceD'].forEach(id=>{
       const el = document.getElementById(id);
       const num = parseFloat(el.textContent);
       el.classList.toggle('pos', num > 0);
@@ -940,12 +940,11 @@
   }
   function buildDumbbell(v){
     const pctFmt = (n)=> (n>=0?'+':'')+n.toFixed(2)+'%';
-    const usdFmt = (n)=> (n>=0?'+':'')+n.toFixed(2);
     const rows = [
       dumbbellRow('Total P&amp;L (%)', -16.43, v.newTotalPct, -45, 10, pctFmt),
       dumbbellRow('Annualized Yield (%)', -31.87, v.newAnnualized, -65, 10, pctFmt),
-      dumbbellRow('Grid P&amp;L (USDT)', 36.92, v.newGridProfit, 0, 60, usdFmt),
-      dumbbellRow('Floating P&amp;L (USDT)', -186.31, v.newFloat, -220, 0, usdFmt),
+      dumbbellRow('Grid P&amp;L (%)', 4.05, v.newGridProfit/INVESTMENT*100, 0, 8, pctFmt),
+      dumbbellRow('Floating P&amp;L (%)', -20.49, v.newFloat/INVESTMENT*100, -25, 0, pctFmt),
     ];
     document.getElementById('dumbbellWrap').innerHTML = rows.join('');
   }
