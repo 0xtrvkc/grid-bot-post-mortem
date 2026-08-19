@@ -6,7 +6,7 @@ No build step, no backend, no dependencies. Open the HTML file in a browser and 
 
 ## Live demo
 
-Open [`index.html`](./index.html) or https://0xtrvkc.github.io/grid-bot-post-mortem/ directly in any modern browser, or serve the repo with GitHub Pages and visit the published URL.
+Open [`index.html`](./index.html) or https://0xtrvkc.github.io/grid-bot-post-mortem/
 
 ## What it does
 
