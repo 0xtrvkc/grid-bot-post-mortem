@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>BTC/USDT Spot Grid — Quant Report</title>
+<style>
+  :root{
+    --bg:#0A0A0C;
+    --panel:#111114;
+    --stroke:rgba(255,255,255,0.07);
+    --stroke2:rgba(255,255,255,0.04);
+    --text1:#E7E7E9;
+    --text2:#8E8E93;
+    --text3:#5A5A5E;
+    --blue:#5AA9FF;
+    --green:#4FCF75;
+    --red:#FF6B63;
+    --teal:#5AC8DE;
+    --track:rgba(255,255,255,0.06);
+    --switch-knob:#C7C7CC;
+    color-scheme: dark;
+  }
+  :root[data-theme="light"]{
+    --bg:#F5F5F7;
+    --panel:#FFFFFF;
+    --stroke:rgba(0,0,0,0.08);
+    --stroke2:rgba(0,0,0,0.06);
+    --text1:#1D1D1F;
+    --text2:#6E6E73;
+    --text3:#8E8E93;
+    --blue:#0071E3;
+    --green:#1A8A3D;
+    --red:#D62F27;
+    --teal:#0091A8;
+    --track:rgba(0,0,0,0.07);
+    --switch-knob:#FFFFFF;
+    color-scheme: light;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{background:var(--bg); transition:background .2s ease;}
+  body{
+    background:var(--bg); color:var(--text1);
+    font-family:-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding:26px 0 40px;
+    transition:background .2s ease, color .2s ease;
+  }
+  .mono{font-family:"SF Mono", ui-monospace, "Menlo", "Consolas", monospace; font-variant-numeric:tabular-nums;}
+  .page{width:1024px; max-width:100%; margin:0 auto; padding:0 28px;}
+
+  /* ---------- header ---------- */
+  .eyebrow{font-size:10.5px; font-weight:600; letter-spacing:1.8px; color:var(--text3); text-transform:uppercase;}
+  .titlerow{display:flex; justify-content:space-between; align-items:flex-start; gap:20px; margin-top:8px; flex-wrap:wrap;}
+  h1{font-size:20px; font-weight:600; letter-spacing:-0.2px; color:var(--text1);}
+  h1 .idtag{color:var(--text3); font-weight:500; font-size:14px; margin-left:6px;}
+  .meta{font-size:12px; color:var(--text2); margin-top:6px;}
+  .meta .status{color:var(--red); font-weight:600;}
+  .meta .dot{color:var(--text3); margin:0 6px;}
+
+  .toggle-wrap{display:flex; align-items:center; gap:10px; flex-shrink:0;}
+  .switch{width:40px; height:23px; border-radius:100px; background:var(--track); border:1px solid var(--stroke); position:relative; cursor:pointer; padding:0; flex-shrink:0;}
+  .switch .knob{position:absolute; top:2px; left:2px; width:17px; height:17px; border-radius:50%; background:var(--switch-knob); transition:transform .18s ease, background .18s ease;}
+  .switch.on{background:rgba(90,169,255,0.28); border-color:rgba(90,169,255,0.4);}
+  .switch.on .knob{transform:translateX(17px); background:var(--blue);}
+
+  .icon-toggle{
+    width:32px; height:32px; border-radius:9px; border:1px solid var(--stroke); background:transparent;
+    cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; color:var(--text2);
+    transition:background .15s ease, color .15s ease;
+  }
+  .icon-toggle:hover{background:var(--track); color:var(--text1);}
+  .icon-toggle svg{width:16px; height:16px;}
+  .divider-v{width:1px; height:20px; background:var(--stroke); flex-shrink:0;}
+
+  hr{border:none; height:1px; background:var(--stroke); margin:20px 0;}
+
+  /* ---------- tabs ---------- */
+  .tabnav{display:flex; gap:4px; margin-top:20px; border-bottom:1px solid var(--stroke);}
+  .tabbtn{
+    background:transparent; border:none; cursor:pointer; padding:9px 4px 10px; margin-right:20px;
+    font-size:12.5px; font-weight:600; color:var(--text3); position:relative; font-family:inherit;
+    transition:color .15s ease;
+  }
+  .tabbtn:hover{color:var(--text2);}
+  .tabbtn.active{color:var(--text1);}
+  .tabbtn.active::after{content:""; position:absolute; left:0; right:0; bottom:-1px; height:2px; background:var(--blue); border-radius:2px;}
+  .tabbtn .live-dot{display:inline-block; width:5px; height:5px; border-radius:50%; background:var(--green); margin-left:6px; vertical-align:middle; opacity:0.9;}
+  .tabpanel{display:none;}
+  .tabpanel.active{display:block;}
+  .fetch-status{font-size:10.5px; color:var(--text3); margin-top:12px; display:flex; align-items:center; gap:6px;}
+  .fetch-status .sp{width:6px; height:6px; border-radius:50%; background:var(--text3);}
+  .fetch-status.ok .sp{background:var(--green);}
+  .fetch-status.err .sp{background:var(--red);}
+
+  /* ---------- ticker strip ---------- */
+  .ticker{display:flex; border:1px solid var(--stroke); border-radius:12px; overflow:hidden; margin-top:18px;}
+  .ticker.second{margin-top:10px;}
+  .tick{flex:1; padding:13px 16px; border-left:1px solid var(--stroke);}
+  .tick:first-child{border-left:none;}
+  .tick .l{font-size:9.5px; color:var(--text3); text-transform:uppercase; letter-spacing:0.8px; font-weight:600;}
+  .tick .v{font-size:16px; margin-top:5px; font-weight:600;}
+  .tick .v.small{font-size:14px;}
+  .tick .v.pos{color:var(--green);}
+  .tick .v.neg{color:var(--red);}
+  .tick .v.neu{color:var(--text1);}
+
+  /* ---------- panels ---------- */
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:16px;}
+  .col{display:flex; flex-direction:column; gap:14px;}
+  .panel{background:var(--panel); border:1px solid var(--stroke); border-radius:14px; padding:16px 18px 18px;}
+  .panel h2{font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.7px; color:var(--text2); padding-bottom:10px; margin-bottom:12px; border-bottom:1px solid var(--stroke2);}
+  .panel .note{font-size:11px; color:var(--text3); margin-top:10px; line-height:1.55;}
+
+  /* ---------- inline bar rows ---------- */
+  .barrow{margin-bottom:11px;}
+  .barrow:last-child{margin-bottom:0;}
+  .barrow .rowtop{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:5px;}
+  .barrow .lab{font-size:12px; color:var(--text2);}
+  .barrow .val{font-size:12.5px; font-weight:600;}
+  .barrow .val.pos{color:var(--green);}
+  .barrow .val.neg{color:var(--red);}
+  .barrow .val.neu{color:var(--text1);}
+  .track{height:5px; border-radius:3px; background:var(--track); overflow:hidden;}
+  .fill{height:100%; border-radius:3px;}
+  .fill.blue{background:var(--blue);}
+  .fill.green{background:var(--green);}
+  .fill.red{background:var(--red);}
+  .fill.gray{background:#9A9A9E;}
+
+  /* ---------- range map ---------- */
+  .rangetrack{position:relative; height:6px; border-radius:3px; background:var(--track); margin:34px 0 8px;}
+  .rmarker{position:absolute; top:-24px; transform:translateX(-50%); display:flex; flex-direction:column; align-items:center;}
+  .rmarker .rlab{font-size:10.5px; font-weight:600; white-space:nowrap;}
+  .rmarker .rsub{font-size:9.5px; color:var(--text3); white-space:nowrap; margin-top:1px;}
+  .rmarker .pin{width:1.5px; height:16px; background:currentColor; margin-top:3px;}
+  .rmarker .dot{width:6px; height:6px; border-radius:50%; background:currentColor; margin-top:-3px;}
+  .rangecaps{display:flex; justify-content:space-between; font-size:10.5px; color:var(--text3); margin-top:4px;}
+
+  /* ---------- tables ---------- */
+  table{width:100%; border-collapse:collapse; font-size:12px;}
+  th{text-align:left; font-size:9.5px; color:var(--text3); text-transform:uppercase; letter-spacing:0.6px; font-weight:600; padding-bottom:8px; border-bottom:1px solid var(--stroke2);}
+  th.r{text-align:right;}
+  td{padding:9px 0; border-bottom:1px solid var(--stroke2); color:var(--text1);}
+  tr:last-child td{border-bottom:none;}
+  td.r{text-align:right; font-weight:600;}
+  td.lbl{color:var(--text2); font-weight:500;}
+
+  /* ---------- verdict ---------- */
+  .verdict{margin-top:14px;}
+  .vlist{display:flex; flex-direction:column; gap:11px;}
+  .vitem{display:flex; gap:11px; font-size:12.5px; line-height:1.6; color:var(--text1);}
+  .vidx{font-size:11px; color:var(--text3); font-weight:600; padding-top:1px; flex-shrink:0; width:16px;}
+  .vitem b{color:var(--text1); font-weight:600;}
+  .accent-g{color:var(--green); font-weight:600;}
+  .accent-r{color:var(--red); font-weight:600;}
+
+  /* ---------- compare table ---------- */
+  .cmp-table td, .cmp-table th{font-size:12px;}
+  .cmp-table td.delta.pos{color:var(--green);}
+  .cmp-table td.delta.neg{color:var(--red);}
+  .statgrid{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-top:2px;}
+  .statcard{background:var(--track); border-radius:10px; padding:12px 13px;}
+  .statcard .l{font-size:9.5px; color:var(--text3); text-transform:uppercase; letter-spacing:0.5px; font-weight:600;}
+  .statcard .v{font-size:15px; font-weight:600; margin-top:5px;}
+  @media(max-width:760px){ .statgrid{grid-template-columns:repeat(2,1fr);} }
+
+  /* ---------- dumbbell compare chart ---------- */
+  .legend-row{display:flex; gap:16px; margin-bottom:14px; font-size:10.5px; color:var(--text2);}
+  .legend-row span{display:inline-flex; align-items:center; gap:5px;}
+  .legend-row .sw{width:8px; height:8px; border-radius:50%; display:inline-block;}
+  .dbrow{margin-bottom:18px;}
+  .dbrow:last-child{margin-bottom:0;}
+  .dbtop{display:flex; justify-content:space-between; font-size:11.5px; color:var(--text2); margin-bottom:9px;}
+  .dbtop .closed-v{color:var(--text3); margin-right:10px;}
+  .dbtop .ongoing-v{color:var(--blue); font-weight:600;}
+  .dbtrack{position:relative; height:3px; background:var(--track); border-radius:2px;}
+  .dbline{position:absolute; top:0; height:100%; background:rgba(90,169,255,0.32); border-radius:2px;}
+  .dbdot{position:absolute; top:50%; width:11px; height:11px; border-radius:50%; transform:translate(-50%,-50%); border:2px solid var(--panel); box-sizing:content-box;}
+  .dbdot.closed{background:#9A9A9E;}
+  .dbdot.ongoing{background:var(--blue);}
+  .dbaxis{display:flex; justify-content:space-between; font-size:9.5px; color:var(--text3); margin-top:6px;}
+
+  /* ---------- price path chart ---------- */
+  .pp-wrap{position:relative; width:100%;}
+  .pp-wrap svg{width:100%; height:auto; display:block; overflow:visible;}
+  .pp-caption{display:flex; justify-content:space-between; font-size:9.5px; color:var(--text3); margin-top:6px;}
+  .pp-labels{position:relative; height:0;}
+  .pp-tag{position:absolute; font-size:9.5px; font-weight:600; transform:translate(-50%,0); white-space:nowrap;}
+
+  /* ---------- return histogram ---------- */
+  .histwrap{position:relative; display:flex; align-items:flex-end; height:100px; gap:2px; margin-top:6px;}
+  .histbar{flex:1; background:var(--blue); opacity:0.45; border-radius:2px 2px 0 0; min-height:2px;}
+  .histbar.tail{background:var(--red); opacity:0.6;}
+  .histaxis{display:flex; justify-content:space-between; font-size:9.5px; color:var(--text3); margin-top:6px;}
+
+  footer{margin-top:20px; font-size:10.5px; color:var(--text3); line-height:1.6;}
+
+  @media(max-width:760px){ .grid2{grid-template-columns:1fr;} .ticker{flex-wrap:wrap;} .tick{flex:1 1 33%; border-left:none; border-top:1px solid var(--stroke);} }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="eyebrow">Quant Post-Trade Report</div>
+  <div class="titlerow">
+    <div>
+      <h1>BTC / USDT Spot Grid</h1>
+      <div class="meta mono">Jan 7 – Jul 14, 2026<span class="dot">·</span>188d 2h 55m<span class="dot">·</span>Arithmetic, 78 lines<span class="dot">·</span>54,000–120,000<span class="dot">·</span><span class="status">Canceled</span></div>
+    </div>
+    <div class="toggle-wrap">
+      <span style="font-size:11.5px; color:var(--text2); white-space:nowrap;">Amounts hidden (% only)</span>
+      <div class="divider-v"></div>
+      <button id="themeToggle" class="icon-toggle" aria-label="Toggle day / night theme">
+        <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== TABS ===== -->
+  <div class="tabnav">
+    <button class="tabbtn active" data-tab="closed">Closed (Actual)</button>
+    <button class="tabbtn" data-tab="ongoing">Ongoing (What-If)<span class="live-dot" id="liveDot" style="display:none;"></span></button>
+    <button class="tabbtn" data-tab="compare">Compare &amp; Stats</button>
+  </div>
+
+  <div id="tab-closed" class="tabpanel active">
+
+  <!-- ===== TOP: GRID MECHANICS + POSITION LEDGER ===== -->
+  <div class="grid2">
+    <div class="col">
+      <div class="panel">
+        <h2>Grid Mechanics</h2>
+        <table class="mono">
+          <tbody>
+            <tr><td class="lbl">Grid lines</td><td class="r">78</td></tr>
+            <tr><td class="lbl">Step size</td><td class="r">846.15 USDT</td></tr>
+            <tr><td class="lbl">Qty / order</td><td class="r">0.00013 BTC</td></tr>
+            <tr><td class="lbl">Profit / grid</td><td class="r">0.50 – 1.36%</td></tr>
+            <tr><td class="lbl">Matched trades</td><td class="r">400 · 2.12/day</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="col">
+      <div class="panel">
+        <h2>Position Ledger</h2>
+        <table class="mono">
+          <thead><tr><th>Event</th><th class="r">Qty BTC</th><th class="r">Price</th><th class="r">Value</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="lbl">Initial buy</td>
+              <td class="r">0.00437</td>
+              <td class="r">91,813.80</td>
+              <td class="r fig" data-usd="401.23" data-pct="44.11%">401.23</td>
+            </tr>
+            <tr>
+              <td class="lbl">Stop sell (avg)</td>
+              <td class="r">0.00881</td>
+              <td class="r">63,474.54</td>
+              <td class="r fig" data-usd="559.21" data-pct="61.48%">559.21</td>
+            </tr>
+            <tr>
+              <td class="lbl">Reserved fees</td>
+              <td class="r">0.00007</td>
+              <td class="r">—</td>
+              <td class="r fig" data-usd="3.00" data-pct="0.33%">3.00</td>
+            </tr>
+            <tr>
+              <td class="lbl">Final balance</td>
+              <td class="r">0.00000</td>
+              <td class="r">—</td>
+              <td class="r fig" data-usd="760.22" data-pct="83.57%">760.22</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TICKER STRIP ===== -->
+  <div class="ticker mono" style="margin-top:16px;">
+    <div class="tick">
+      <div class="l">Investment</div>
+      <div class="v neu fig" data-usd="909.60" data-pct="100.00%">909.60</div>
+    </div>
+    <div class="tick">
+      <div class="l">Balance at Stop</div>
+      <div class="v neu fig" data-usd="760.22" data-pct="83.57%">760.22</div>
+    </div>
+    <div class="tick">
+      <div class="l">Grid P&amp;L</div>
+      <div class="v pos fig" data-usd="+36.92" data-pct="+4.05%">+36.92</div>
+    </div>
+    <div class="tick">
+      <div class="l">Floating P&amp;L</div>
+      <div class="v neg fig" data-usd="−186.31" data-pct="−20.49%">−186.31</div>
+    </div>
+    <div class="tick">
+      <div class="l">Total P&amp;L</div>
+      <div class="v neg fig" data-usd="−149.38" data-pct="−16.43%">−149.38</div>
+    </div>
+    <div class="tick">
+      <div class="l">Ann. Yield</div>
+      <div class="v neg">−31.87%</div>
+    </div>
+  </div>
+
+  <!-- ===== TICKER STRIP 2 — CASH FLOW GENERATOR ===== -->
+  <div style="font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:0.7px; font-weight:600; margin-top:16px;">Cash Flow Generator</div>
+  <div class="ticker second mono">
+    <div class="tick">
+      <div class="l">Grid Edge, Ann.</div>
+      <div class="v pos">+7.86%</div>
+    </div>
+    <div class="tick">
+      <div class="l">Directional Exp., Ann.</div>
+      <div class="v neg">−39.73%</div>
+    </div>
+    <div class="tick">
+      <div class="l">Daily Cash Flow, USDT/d</div>
+      <div class="v neu small fig" data-usd="0.196" data-pct="0.0215%">0.196</div>
+    </div>
+    <div class="tick">
+      <div class="l">Profit / Trade, USDT</div>
+      <div class="v neu small fig" data-usd="0.092" data-pct="0.0101%">0.092</div>
+    </div>
+    <div class="tick">
+      <div class="l">Trade Velocity</div>
+      <div class="v neu small">2.12 /day</div>
+    </div>
+    <div class="tick">
+      <div class="l">Breakeven Runway</div>
+      <div class="v neu small">≈ 949 d</div>
+    </div>
+  </div>
+
+  <!-- ===== MAIN GRID ===== -->
+  <div class="grid2">
+
+    <div class="col">
+
+      <!-- Range map -->
+      <div class="panel">
+        <h2>Grid Range Position</h2>
+        <div class="rangetrack">
+          <div class="rmarker" style="left:57.29%; color:var(--blue);">
+            <div class="rlab">Entry 91,813.80</div>
+            <div class="rsub">Jan 7 · 57.3%</div>
+            <div class="pin"></div><div class="dot"></div>
+          </div>
+        </div>
+        <div class="rangetrack" style="margin-top:44px;">
+          <div class="rmarker" style="left:14.35%; color:var(--red);">
+            <div class="rlab">Stop-Sell 63,474.54</div>
+            <div class="rsub">Jul 14 · 14.3%</div>
+            <div class="pin"></div><div class="dot"></div>
+          </div>
+        </div>
+        <div class="rangecaps mono"><span>Floor 54,000</span><span>Ceiling 120,000</span></div>
+        <div class="note">Price migrated 42.9 pts down-range, a −30.87% move from entry to average stop-sell price. This directional shift — not the grid mechanics — accounts for nearly all of the loss.</div>
+      </div>
+
+      <!-- Cash flow bridge -->
+      <div class="panel">
+        <h2>Cash Flow Bridge</h2>
+        <div class="barrow">
+          <div class="rowtop"><span class="lab">Investment</span><span class="val neu mono fig" data-usd="909.60" data-pct="100.00%">909.60</span></div>
+          <div class="track"><div class="fill blue" style="width:100%"></div></div>
+        </div>
+        <div class="barrow">
+          <div class="rowtop"><span class="lab">Grid Profit (realized)</span><span class="val pos mono fig" data-usd="+36.92" data-pct="+4.05%">+36.92</span></div>
+          <div class="track"><div class="fill green" style="width:4.1%"></div></div>
+        </div>
+        <div class="barrow">
+          <div class="rowtop"><span class="lab">Floating P&amp;L (crystallized)</span><span class="val neg mono fig" data-usd="−186.31" data-pct="−20.49%">−186.31</span></div>
+          <div class="track"><div class="fill red" style="width:20.5%"></div></div>
+        </div>
+        <div class="barrow">
+          <div class="rowtop"><span class="lab">Balance at stop</span><span class="val neu mono fig" data-usd="760.22" data-pct="83.57%">760.22</span></div>
+          <div class="track"><div class="fill gray" style="width:83.6%"></div></div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="col">
+
+      <!-- Breakeven -->
+      <div class="panel">
+        <h2>Cash-Flow Breakeven Runway</h2>
+        <div class="barrow">
+          <div class="rowtop"><span class="lab">Actual runtime</span><span class="val neu mono">188 d</span></div>
+          <div class="track"><div class="fill blue" style="width:19.8%"></div></div>
+        </div>
+        <div class="barrow">
+          <div class="rowtop"><span class="lab">Runway needed to offset float loss</span><span class="val neu mono">≈ 949 d</span></div>
+          <div class="track"><div class="fill gray" style="width:100%"></div></div>
+        </div>
+        <div class="note">At the realized pace of <span class="fig mono" data-usd="0.196 USDT/day" data-pct="0.0215%/day">0.196 USDT/day</span>, recouping the floating loss through grid cash flow alone needs ~5.0× the time the bot actually ran.</div>
+      </div>
+
+      <!-- Return attribution -->
+      <div class="panel">
+        <h2>Return Attribution — Annualized</h2>
+        <div class="barrow">
+          <div class="rowtop"><span class="lab">Grid trading edge</span><span class="val pos mono">+7.86%</span></div>
+          <div class="track"><div class="fill green" style="width:19.8%"></div></div>
+        </div>
+        <div class="barrow">
+          <div class="rowtop"><span class="lab">Directional exposure</span><span class="val neg mono">−39.73%</span></div>
+          <div class="track"><div class="fill red" style="width:100%"></div></div>
+        </div>
+        <div class="barrow">
+          <div class="rowtop"><span class="lab">Net result</span><span class="val neg mono">−31.87%</span></div>
+          <div class="track"><div class="fill gray" style="width:80.2%"></div></div>
+        </div>
+        <div class="note">Isolating the two components: the grid alone earns a steady positive carry; the held BTC inventory is what exposes the account to price risk.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== VERDICT ===== -->
+  <div class="panel verdict">
+    <h2>Quant Verdict</h2>
+    <div class="vlist">
+      <div class="vitem"><span class="vidx mono">01</span><div>The grid engine itself worked: 400 matched trades harvested <span class="accent-g fig mono" data-usd="+36.92 USDT" data-pct="+4.05%">+36.92 USDT</span> (≈+7.9% annualized) of volatility income, independent of BTC's direction — the strategy's real, repeatable cash flow.</div></div>
+      <div class="vitem"><span class="vidx mono">02</span><div>Directional exposure overwhelmed it: BTC fell −30.87% from 91,813.80 to 63,474.54, generating a <span class="accent-r fig mono" data-usd="−186.31 USDT" data-pct="−20.49%">−186.31 USDT</span> mark-to-market loss, crystallized on cancellation.</div></div>
+      <div class="vitem"><span class="vidx mono">03</span><div>A spot grid is not delta-neutral — every completed buy leaves inventory fully exposed to price. Widening the range doesn't fix this; only smaller size, a hedge, or a hard stop does.</div></div>
+      <div class="vitem"><span class="vidx mono">04</span><div>The honest metric is total account return (<b>−16.43%, −31.87% annualized</b>) — cash-flow yield and directional beta should always be read together, never in isolation.</div></div>
+    </div>
+  </div>
+
+  </div>
+  <!-- /tab-closed -->
+
+  <!-- ===== ONGOING (WHAT-IF) TAB ===== -->
+  <div id="tab-ongoing" class="tabpanel">
+
+    <!-- ===== TOP: LIVE REFERENCE + PROJECTION BASIS ===== -->
+    <div class="grid2">
+      <div class="col">
+        <div class="panel">
+          <h2>Live Reference</h2>
+          <table class="mono">
+            <tbody>
+              <tr><td class="lbl">Current BTC price</td><td class="r" id="ogCurrentPrice">—</td></tr>
+              <tr><td class="lbl">As of</td><td class="r" id="ogAsOf">—</td></tr>
+              <tr><td class="lbl">Change since stop</td><td class="r" id="ogPctSinceStop">—</td></tr>
+              <tr><td class="lbl">Extra days running</td><td class="r" id="ogExtraDays">—</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="col">
+        <div class="panel">
+          <h2>Projection Basis</h2>
+          <table class="mono">
+            <tbody>
+              <tr><td class="lbl">Cost basis (derived)</td><td class="r">84,622.10</td></tr>
+              <tr><td class="lbl">Held qty (not sold)</td><td class="r">0.00881 BTC</td></tr>
+              <tr><td class="lbl">Stop-reference price</td><td class="r">63,474.54</td></tr>
+              <tr><td class="lbl">Projected current price</td><td class="r" id="ogProjectedPrice">—</td></tr>
+              <tr><td class="lbl">Daily grid rate</td><td class="r">0.196 USDT/d</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="note" style="margin-top:2px;">Position marked using an independent hourly BTC index (0xtrvkc/dynamic-btc-analytics-dashboard), not the exchange's own tick feed — treat as an estimate, not an exchange-confirmed figure.</div>
+
+    <!-- ===== TICKER STRIP ===== -->
+    <div class="ticker mono" style="margin-top:16px;">
+      <div class="tick">
+        <div class="l">Investment</div>
+        <div class="v neu fig" data-usd="909.60" data-pct="100.00%">909.60</div>
+      </div>
+      <div class="tick">
+        <div class="l">Projected Balance</div>
+        <div class="v neu fig" id="ogBalance" data-usd="—" data-pct="—">—</div>
+      </div>
+      <div class="tick">
+        <div class="l">Grid P&amp;L (extended)</div>
+        <div class="v pos fig" id="ogGrid" data-usd="—" data-pct="—">—</div>
+      </div>
+      <div class="tick">
+        <div class="l">Floating P&amp;L (live mark)</div>
+        <div class="v neg fig" id="ogFloat" data-usd="—" data-pct="—">—</div>
+      </div>
+      <div class="tick">
+        <div class="l">Total P&amp;L</div>
+        <div class="v neg fig" id="ogTotal" data-usd="—" data-pct="—">—</div>
+      </div>
+      <div class="tick">
+        <div class="l">Ann. Yield</div>
+        <div class="v neg mono" id="ogAnnualized">—</div>
+      </div>
+    </div>
+
+    <!-- ===== TICKER STRIP 2 — CASH FLOW GENERATOR, WHAT-IF ===== -->
+    <div style="font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:0.7px; font-weight:600; margin-top:16px;">Cash Flow Generator — What-If</div>
+    <div class="ticker second mono">
+      <div class="tick">
+        <div class="l">Grid Edge, Ann.</div>
+        <div class="v pos" id="ogEdgeAnn">—</div>
+      </div>
+      <div class="tick">
+        <div class="l">Directional Exp., Ann.</div>
+        <div class="v neg" id="ogExpAnn">—</div>
+      </div>
+      <div class="tick">
+        <div class="l">Daily Cash Flow, USDT/d</div>
+        <div class="v neu small fig" data-usd="0.196" data-pct="0.0215%">0.196</div>
+      </div>
+      <div class="tick">
+        <div class="l">Profit / Trade, USDT</div>
+        <div class="v neu small fig" data-usd="0.092" data-pct="0.0101%">0.092</div>
+      </div>
+      <div class="tick">
+        <div class="l">Trade Velocity</div>
+        <div class="v neu small">2.12 /day</div>
+      </div>
+      <div class="tick">
+        <div class="l">Breakeven Runway</div>
+        <div class="v neu small" id="ogBreakevenTicker">—</div>
+      </div>
+    </div>
+
+    <div class="fetch-status" id="fetchStatus"><span class="sp"></span><span id="fetchStatusText">Fetching live BTC price feed…</span></div>
+
+    <!-- ===== MAIN GRID ===== -->
+    <div class="grid2">
+
+      <div class="col">
+
+        <!-- Range map -->
+        <div class="panel">
+          <h2>Grid Range Position</h2>
+          <div class="rangetrack">
+            <div class="rmarker" style="left:57.29%; color:var(--blue);">
+              <div class="rlab">Entry 91,813.80</div>
+              <div class="rsub">Jan 7 · 57.3%</div>
+              <div class="pin"></div><div class="dot"></div>
+            </div>
+          </div>
+          <div class="rangetrack" style="margin-top:44px;">
+            <div class="rmarker" id="ogRangeMarker" style="left:14.35%; color:var(--teal);">
+              <div class="rlab" id="ogRangeLab">Now (projected) —</div>
+              <div class="rsub" id="ogRangeSub">—</div>
+              <div class="pin"></div><div class="dot"></div>
+            </div>
+          </div>
+          <div class="rangecaps mono"><span>Floor 54,000</span><span>Ceiling 120,000</span></div>
+          <div class="note" id="ogRangeNote">Waiting on live data…</div>
+        </div>
+
+        <!-- Cash flow bridge -->
+        <div class="panel">
+          <h2>Cash Flow Bridge — What-If</h2>
+          <div class="barrow">
+            <div class="rowtop"><span class="lab">Investment</span><span class="val neu mono fig" data-usd="909.60" data-pct="100.00%">909.60</span></div>
+            <div class="track"><div class="fill blue" style="width:100%"></div></div>
+          </div>
+          <div class="barrow">
+            <div class="rowtop"><span class="lab">Grid profit (extended)</span><span class="val pos mono fig" id="ogGridBar" data-usd="—" data-pct="—">—</span></div>
+            <div class="track"><div class="fill green" id="ogGridBarFill" style="width:0%"></div></div>
+          </div>
+          <div class="barrow">
+            <div class="rowtop"><span class="lab">Floating P&amp;L (live mark)</span><span class="val neg mono fig" id="ogFloatBar" data-usd="—" data-pct="—">—</span></div>
+            <div class="track"><div class="fill red" id="ogFloatBarFill" style="width:0%"></div></div>
+          </div>
+          <div class="barrow">
+            <div class="rowtop"><span class="lab">Projected balance</span><span class="val neu mono fig" id="ogBalBar" data-usd="—" data-pct="—">—</span></div>
+            <div class="track"><div class="fill gray" id="ogBalBarFill" style="width:0%"></div></div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="col">
+
+        <!-- Breakeven -->
+        <div class="panel">
+          <h2>Cash-Flow Breakeven Runway</h2>
+          <div class="barrow">
+            <div class="rowtop"><span class="lab">Elapsed (if still running)</span><span class="val neu mono" id="ogElapsedDays">—</span></div>
+            <div class="track"><div class="fill blue" id="ogElapsedFill" style="width:0%"></div></div>
+          </div>
+          <div class="barrow">
+            <div class="rowtop"><span class="lab">Runway needed to offset float loss</span><span class="val neu mono" id="ogRunwayNeeded">—</span></div>
+            <div class="track"><div class="fill gray" style="width:100%"></div></div>
+          </div>
+          <div class="note" id="ogBreakevenNote">Waiting on live data…</div>
+        </div>
+
+        <!-- Return attribution -->
+        <div class="panel">
+          <h2>Return Attribution — Annualized</h2>
+          <div class="barrow">
+            <div class="rowtop"><span class="lab">Grid trading edge</span><span class="val pos mono" id="ogEdgeAnn2">—</span></div>
+            <div class="track"><div class="fill green" id="ogEdgeFill" style="width:0%"></div></div>
+          </div>
+          <div class="barrow">
+            <div class="rowtop"><span class="lab">Directional exposure</span><span class="val neg mono" id="ogExpAnn2">—</span></div>
+            <div class="track"><div class="fill red" id="ogExpFill" style="width:0%"></div></div>
+          </div>
+          <div class="barrow">
+            <div class="rowtop"><span class="lab">Net result</span><span class="val neg mono" id="ogNetAnn2">—</span></div>
+            <div class="track"><div class="fill gray" id="ogNetFill" style="width:0%"></div></div>
+          </div>
+          <div class="note">Same decomposition as the closed position, recomputed over the longer, still-running window.</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ===== VERDICT ===== -->
+    <div class="panel verdict">
+      <h2>Quant Verdict — What-If</h2>
+      <div class="vlist">
+        <div class="vitem" id="ogVerdict1"><span class="vidx mono">01</span><div>Waiting on live data…</div></div>
+        <div class="vitem"><span class="vidx mono">02</span><div>Held inventory (0.00881 BTC) is marked to the current live price, using the % move on the independent feed applied to the exchange's own stop price for consistency.</div></div>
+        <div class="vitem"><span class="vidx mono">03</span><div>Realized grid profit is extended forward at the strategy's own historical pace (0.196 USDT/day) for every extra day since cancellation — no new edge, just the same one continuing.</div></div>
+        <div class="vitem"><span class="vidx mono">04</span><div>This is a simulation, not a re-opened position. It exists to answer one question: was canceling the right call, or did it lock in a loss that time and cash flow would have narrowed?</div></div>
+      </div>
+    </div>
+
+  </div>
+  <!-- /tab-ongoing -->
+
+  <!-- ===== COMPARE & STATS TAB ===== -->
+  <div id="tab-compare" class="tabpanel">
+
+    <div class="panel">
+      <h2>Closed vs. Ongoing</h2>
+      <table class="mono cmp-table">
+        <thead><tr><th>Metric</th><th class="r">Closed</th><th class="r">Ongoing</th><th class="r">Δ</th></tr></thead>
+        <tbody>
+          <tr><td class="lbl">Duration</td><td class="r">188.1 d</td><td class="r" id="cmpDuration">—</td><td class="r delta" id="cmpDurationD">—</td></tr>
+          <tr><td class="lbl">Grid P&amp;L</td><td class="r">+36.92</td><td class="r" id="cmpGrid">—</td><td class="r delta" id="cmpGridD">—</td></tr>
+          <tr><td class="lbl">Floating P&amp;L</td><td class="r">−186.31</td><td class="r" id="cmpFloat">—</td><td class="r delta" id="cmpFloatD">—</td></tr>
+          <tr><td class="lbl">Total P&amp;L (USDT)</td><td class="r">−149.38</td><td class="r" id="cmpTotal">—</td><td class="r delta" id="cmpTotalD">—</td></tr>
+          <tr><td class="lbl">Total P&amp;L (%)</td><td class="r">−16.43%</td><td class="r" id="cmpTotalPct">—</td><td class="r delta" id="cmpTotalPctD">—</td></tr>
+          <tr><td class="lbl">Annualized Yield</td><td class="r">−31.87%</td><td class="r" id="cmpAnn">—</td><td class="r delta" id="cmpAnnD">—</td></tr>
+          <tr><td class="lbl">Ending Balance</td><td class="r">760.22</td><td class="r" id="cmpBalance">—</td><td class="r delta" id="cmpBalanceD">—</td></tr>
+        </tbody>
+      </table>
+      <div class="note" id="cmpVerdict">Waiting on live data to compute the comparison…</div>
+    </div>
+
+    <div class="panel" style="margin-top:14px;">
+      <h2>Closed vs. Ongoing — Visual</h2>
+      <div class="legend-row">
+        <span><span class="sw" style="background:#9A9A9E;"></span>Closed (actual)</span>
+        <span><span class="sw" style="background:var(--blue);"></span>Ongoing (what-if)</span>
+      </div>
+      <div id="dumbbellWrap">
+        <div class="note">Waiting on live data…</div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:14px;" id="pricePathPanel">
+      <h2>Price Path — Grid Life → Today</h2>
+      <div class="pp-wrap" id="ppWrap"><div class="note">Waiting on live data…</div></div>
+      <div class="legend-row" style="margin-top:10px; margin-bottom:0;">
+        <span><span class="sw" style="background:var(--blue);"></span>Grid running</span>
+        <span><span class="sw" style="background:var(--text3);"></span>Since cancellation</span>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:14px;">
+      <h2>Expert / Quant Stats — Grid Period (Jan 7 – Jul 14, 2026)</h2>
+      <div class="statgrid mono">
+        <div class="statcard"><div class="l">Max Drawdown (price)</div><div class="v neg" id="statMDD">−40.39%</div></div>
+        <div class="statcard"><div class="l">Ann. Volatility</div><div class="v neu" id="statVol">46.65%</div></div>
+        <div class="statcard"><div class="l">Skewness</div><div class="v neu" id="statSkew">−0.29</div></div>
+        <div class="statcard"><div class="l">Excess Kurtosis</div><div class="v neu" id="statKurt">8.15</div></div>
+        <div class="statcard"><div class="l">Buy &amp; Hold Return</div><div class="v neg" id="statBH">−29.22%</div></div>
+        <div class="statcard"><div class="l">Grid Strategy Return</div><div class="v neg">−16.43%</div></div>
+        <div class="statcard"><div class="l">Grid Alpha vs. B&amp;H</div><div class="v pos" id="statAlpha">+12.79 pts</div></div>
+        <div class="statcard"><div class="l">Sample Size (n hourly)</div><div class="v neu" id="statN">4,516</div></div>
+      </div>
+      <div class="note">Volatility, skew and kurtosis are computed on hourly log returns of the independent BTC index during the grid's operating window. Excess kurtosis of <b class="mono">8.15</b> confirms the well-known fat-tail behavior of crypto returns — the grid's small, frequent profits sit inside a distribution with occasional very large moves, which is exactly the tail risk that produced the −30.87% directional loss here. Negative skew (<b class="mono">−0.29</b>) indicates down-moves during this window were somewhat sharper than up-moves. The grid still beat naive buy-and-hold by roughly <b class="mono" id="statAlphaInline">12.8 points</b> over the same window, since it harvested cash flow on the way down instead of doing nothing.</div>
+    </div>
+
+    <div class="panel" style="margin-top:14px;">
+      <h2>Hourly Return Distribution <span style="text-transform:none; font-weight:400; color:var(--text3);">— actual bars vs. fitted normal curve</span></h2>
+      <div class="histwrap" id="histWrap"><div class="note">Waiting on live data…</div></div>
+      <div class="histaxis mono" id="histAxis"></div>
+      <div class="legend-row" style="margin-top:12px; margin-bottom:0;">
+        <span><span class="sw" style="background:var(--blue); opacity:0.5;"></span>Observed hourly returns</span>
+        <span><span class="sw" style="background:var(--text1); border-radius:0; width:10px; height:2px;"></span>Normal fit (same mean / σ)</span>
+        <span><span class="sw" style="background:var(--red); opacity:0.6;"></span>Beyond ±2σ (tail)</span>
+      </div>
+    </div>
+
+  </div>
+  <!-- /tab-compare -->
+
+  <footer>Closed-tab figures are from the exchange's PnL / History / Details screens. Ongoing and Compare tabs are computed live in your browser from an independent hourly BTC index (<span class="mono">github.com/0xtrvkc/dynamic-btc-analytics-dashboard</span>), re-fetched on every page load — treat them as an analytical estimate, not an exchange-confirmed figure. The range map plots only the two recorded prices (grid start, average stop-sell), not a reconstructed tick chart.</footer>
+
+</div>
+
+<script>
+  // ---- privacy: always hidden, no toggle. Underlying $ figures stay in data-usd
+  // attributes in the source but are never rendered — only % is shown. ----
+  const hidden = true;
+  function apply(){
+    document.querySelectorAll('.fig').forEach(el=>{
+      el.textContent = hidden ? el.dataset.pct : el.dataset.usd;
+    });
+  }
+  apply();
+
+  // ---- day / night theme ----
+  const root = document.documentElement;
+  const themeBtn = document.getElementById('themeToggle');
+  const themeIcon = document.getElementById('themeIcon');
+  const MOON = '<path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/>';
+  const SUN = '<circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/>';
+  let theme = 'light';
+  function applyTheme(){
+    root.setAttribute('data-theme', theme);
+    themeIcon.innerHTML = theme === 'dark' ? MOON : SUN;
+  }
+  themeBtn.addEventListener('click', ()=>{ theme = theme === 'dark' ? 'light' : 'dark'; applyTheme(); });
+  applyTheme();
+
+  // ---- tabs ----
+  const tabBtns = document.querySelectorAll('.tabbtn');
+  const tabPanels = document.querySelectorAll('.tabpanel');
+  tabBtns.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      tabBtns.forEach(b=>b.classList.remove('active'));
+      tabPanels.forEach(p=>p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  // ---- figure setter (respects privacy toggle) ----
+  function setFig(el, usdStr, pctStr){
+    if(!el) return;
+    el.dataset.usd = usdStr;
+    el.dataset.pct = pctStr;
+    el.textContent = hidden ? pctStr : usdStr;
+  }
+  function fmt(n, dp){ dp = dp===undefined?2:dp; const s = n.toFixed(dp); return (n>=0?'+':'') + s; }
+  function fmtPlain(n, dp){ dp = dp===undefined?2:dp; return n.toFixed(dp); }
+
+  // ---- fixed source-of-truth constants (from exchange screenshots) ----
+  const INVESTMENT = 909.60;
+  const GRID_PROFIT_CLOSED = 36.92;
+  const FLOAT_AT_STOP = -186.31;
+  const SELL_QTY_AT_STOP = 0.00881;
+  const STOP_PRICE_EXCHANGE = 63474.54;
+  const START_DT = new Date('2026-01-07T16:38:07');
+  const STOP_DT = new Date('2026-07-14T19:33:35');
+  const DURATION_DAYS_CLOSED = (STOP_DT - START_DT) / 86400000;
+  const GRID_KEY_START = '2026-01-07T16:00';
+  const GRID_KEY_STOP  = '2026-07-14T19:00';
+  const RAW_URL = 'https://raw.githubusercontent.com/0xtrvkc/dynamic-btc-analytics-dashboard/main/btc_1h_price.json';
+
+  // ---- fallback figures (precomputed, used if live fetch fails) ----
+  const FALLBACK = {
+    currentPrice: 64405.06, asOf: '2026-08-18 00:00 UTC', pctSinceStop: -0.19, projectedPrice: 63355.24,
+    extraDays: 34.19, newGridProfit: 43.63, newFloat: -187.36, newTotal: -143.73,
+    newBalance: 765.87, newTotalPct: -15.80, newAnnualized: -25.94,
+    maxDD: -40.39, vol: 46.65, skew: -0.29, kurt: 8.15, buyHold: -29.22, n: 4516
+  };
+
+  function nearestValue(sortedKeys, dataObj, targetKey){
+    if(dataObj[targetKey] !== undefined) return dataObj[targetKey];
+    let lo=0, hi=sortedKeys.length-1;
+    while(lo<hi){ const mid=(lo+hi)>>1; if(sortedKeys[mid] < targetKey) lo=mid+1; else hi=mid; }
+    return dataObj[sortedKeys[lo]];
+  }
+
+  function renderOngoingAndCompare(v){
+    // ---- ongoing tab ----
+    document.getElementById('ogCurrentPrice').textContent = v.currentPrice.toLocaleString(undefined,{maximumFractionDigits:2});
+    document.getElementById('ogAsOf').textContent = v.asOf;
+    document.getElementById('ogPctSinceStop').textContent = fmt(v.pctSinceStop) + '%';
+    document.getElementById('ogExtraDays').textContent = fmtPlain(v.extraDays,1) + ' d';
+    document.getElementById('ogAnnualized').textContent = fmt(v.newAnnualized) + '%';
+
+    setFig(document.getElementById('ogGrid'), fmt(v.newGridProfit)+' USDT', fmt(v.newGridProfit/INVESTMENT*100)+'%');
+    setFig(document.getElementById('ogFloat'), fmt(v.newFloat)+' USDT', fmt(v.newFloat/INVESTMENT*100)+'%');
+    setFig(document.getElementById('ogTotal'), fmt(v.newTotal)+' USDT', fmt(v.newTotalPct)+'%');
+    setFig(document.getElementById('ogBalance'), fmtPlain(v.newBalance)+' USDT', fmtPlain(v.newBalance/INVESTMENT*100)+'%');
+
+    setFig(document.getElementById('ogGridBar'), fmt(v.newGridProfit), fmt(v.newGridProfit/INVESTMENT*100)+'%');
+    setFig(document.getElementById('ogFloatBar'), fmt(v.newFloat), fmt(v.newFloat/INVESTMENT*100)+'%');
+    setFig(document.getElementById('ogBalBar'), fmtPlain(v.newBalance), fmtPlain(v.newBalance/INVESTMENT*100)+'%');
+    document.getElementById('ogGridBarFill').style.width = Math.min(100, Math.abs(v.newGridProfit)/INVESTMENT*100) + '%';
+    document.getElementById('ogFloatBarFill').style.width = Math.min(100, Math.abs(v.newFloat)/INVESTMENT*100) + '%';
+    document.getElementById('ogBalBarFill').style.width = Math.min(100, v.newBalance/INVESTMENT*100) + '%';
+
+    // ---- ongoing: projection basis, range map, breakeven, attribution, verdict ----
+    const totalDaysOpenOg = DURATION_DAYS_CLOSED + Math.max(0, v.extraDays);
+    document.getElementById('ogProjectedPrice').textContent = v.projectedPrice.toLocaleString(undefined,{maximumFractionDigits:2});
+
+    const dailyRateOg = GRID_PROFIT_CLOSED / DURATION_DAYS_CLOSED;
+    const edgeAnnOg = (v.newGridProfit/INVESTMENT) * (365/totalDaysOpenOg) * 100;
+    const expAnnOg = (v.newFloat/INVESTMENT) * (365/totalDaysOpenOg) * 100;
+    const netAnnOg = v.newAnnualized;
+    document.getElementById('ogEdgeAnn').textContent = fmt(edgeAnnOg)+'%';
+    document.getElementById('ogExpAnn').textContent = fmt(expAnnOg)+'%';
+    document.getElementById('ogEdgeAnn2').textContent = fmt(edgeAnnOg)+'%';
+    document.getElementById('ogExpAnn2').textContent = fmt(expAnnOg)+'%';
+    document.getElementById('ogNetAnn2').textContent = fmt(netAnnOg)+'%';
+    const maxAbsAttrOg = Math.max(Math.abs(edgeAnnOg), Math.abs(expAnnOg), Math.abs(netAnnOg), 1);
+    document.getElementById('ogEdgeFill').style.width = Math.abs(edgeAnnOg)/maxAbsAttrOg*100 + '%';
+    document.getElementById('ogExpFill').style.width = Math.abs(expAnnOg)/maxAbsAttrOg*100 + '%';
+    document.getElementById('ogNetFill').style.width = Math.abs(netAnnOg)/maxAbsAttrOg*100 + '%';
+
+    const breakevenDaysOg = Math.abs(v.newFloat) / dailyRateOg;
+    document.getElementById('ogElapsedDays').textContent = fmtPlain(totalDaysOpenOg,1)+' d';
+    document.getElementById('ogRunwayNeeded').textContent = '≈ '+Math.round(breakevenDaysOg)+' d';
+    document.getElementById('ogElapsedFill').style.width = Math.min(100, totalDaysOpenOg/breakevenDaysOg*100) + '%';
+    document.getElementById('ogBreakevenTicker').textContent = '≈ '+Math.round(breakevenDaysOg)+' d';
+    document.getElementById('ogBreakevenNote').textContent =
+      `At the same 0.196 USDT/day pace, fully offsetting the live-marked floating loss needs ≈${Math.round(breakevenDaysOg)} days total — ${(breakevenDaysOg/totalDaysOpenOg).toFixed(1)}× the time elapsed so far.`;
+
+    const rangePct = Math.max(0, Math.min(100, (v.projectedPrice-54000)/(120000-54000)*100));
+    const marker = document.getElementById('ogRangeMarker');
+    marker.style.left = rangePct.toFixed(2) + '%';
+    document.getElementById('ogRangeLab').textContent = 'Now (projected) ' + v.projectedPrice.toLocaleString(undefined,{maximumFractionDigits:2});
+    document.getElementById('ogRangeSub').textContent = 'Today · ' + rangePct.toFixed(1) + '%';
+    document.getElementById('ogRangeNote').textContent =
+      `Since the stop, price has moved ${fmt(v.pctSinceStop)}% (independent feed), landing ${rangePct.toFixed(1)}% up the 54,000–120,000 band — versus 14.3% at the moment the bot was actually canceled.`;
+
+    const ogVerdict1 = document.getElementById('ogVerdict1').querySelector('div');
+    ogVerdict1.innerHTML = v.newAnnualized > -31.87
+      ? `Had the grid kept running, today's annualized read would be <b>${fmt(v.newAnnualized)}%</b> versus the <b>−31.87%</b> actually locked in — a meaningfully softer number, largely because spreading the same loss over a longer window lowers its annualized rate.`
+      : `Had the grid kept running, today's annualized read would be <b>${fmt(v.newAnnualized)}%</b>, still worse than the <b>−31.87%</b> actually locked in — in this case, canceling was the better call.`;
+
+    // ---- compare tab ----
+    const totalDaysOpen = DURATION_DAYS_CLOSED + Math.max(0, v.extraDays);
+    document.getElementById('cmpDuration').textContent = fmtPlain(totalDaysOpen,1)+' d';
+    document.getElementById('cmpDurationD').textContent = fmt(Math.max(0, v.extraDays),1)+' d';
+    document.getElementById('cmpGrid').textContent = fmt(v.newGridProfit);
+    document.getElementById('cmpGridD').textContent = fmt(v.newGridProfit - GRID_PROFIT_CLOSED);
+    document.getElementById('cmpFloat').textContent = fmt(v.newFloat);
+    document.getElementById('cmpFloatD').textContent = fmt(v.newFloat - FLOAT_AT_STOP);
+    document.getElementById('cmpTotal').textContent = fmt(v.newTotal);
+    document.getElementById('cmpTotalD').textContent = fmt(v.newTotal - (-149.38));
+    document.getElementById('cmpTotalPct').textContent = fmt(v.newTotalPct)+'%';
+    document.getElementById('cmpTotalPctD').textContent = fmt(v.newTotalPct - (-16.43))+' pts';
+    document.getElementById('cmpAnn').textContent = fmt(v.newAnnualized)+'%';
+    document.getElementById('cmpAnnD').textContent = fmt(v.newAnnualized - (-31.87))+' pts';
+    document.getElementById('cmpBalance').textContent = fmtPlain(v.newBalance);
+    document.getElementById('cmpBalanceD').textContent = fmt(v.newBalance - 760.22);
+
+    ['cmpDurationD','cmpGridD','cmpFloatD','cmpTotalD','cmpTotalPctD','cmpAnnD','cmpBalanceD'].forEach(id=>{
+      const el = document.getElementById(id);
+      const num = parseFloat(el.textContent);
+      el.classList.toggle('pos', num > 0);
+      el.classList.toggle('neg', num < 0);
+    });
+
+    const verdictText = v.newAnnualized > -31.87
+      ? `Letting it ride would show an annualized yield of ${fmt(v.newAnnualized)}% vs. the −31.87% actually realized — closing early crystallized a loss right as annualizing a short window inflated its yearly rate.`
+      : `Closing turned out to be the better call: continuing would show ${fmt(v.newAnnualized)}%, worse than the −31.87% actually realized.`;
+    document.getElementById('cmpVerdict').textContent = verdictText;
+
+    document.getElementById('statMDD').textContent = fmt(v.maxDD)+'%';
+    document.getElementById('statVol').textContent = fmtPlain(v.vol)+'%';
+    document.getElementById('statSkew').textContent = fmtPlain(v.skew);
+    document.getElementById('statKurt').textContent = fmtPlain(v.kurt);
+    document.getElementById('statBH').textContent = fmt(v.buyHold)+'%';
+    document.getElementById('statN').textContent = v.n.toLocaleString();
+    const alpha = -16.43 - v.buyHold;
+    document.getElementById('statAlpha').textContent = fmt(alpha)+' pts';
+    document.getElementById('statAlphaInline').textContent = fmtPlain(Math.abs(alpha),1)+' points';
+
+    apply(); // re-apply privacy toggle state to newly written figures
+  }
+
+  function computeFromData(data){
+    const keys = Object.keys(data).sort();
+    const lastKey = keys[keys.length-1];
+    const currentPrice = data[lastKey];
+    const latestDT = new Date(lastKey);
+    const stopFeedPrice = nearestValue(keys, data, GRID_KEY_STOP);
+    const startFeedPrice = nearestValue(keys, data, GRID_KEY_START);
+
+    const pctSinceStop = (currentPrice - stopFeedPrice) / stopFeedPrice * 100;
+    const projectedPrice = STOP_PRICE_EXCHANGE * (1 + pctSinceStop/100);
+    const costBasis = STOP_PRICE_EXCHANGE - (FLOAT_AT_STOP / SELL_QTY_AT_STOP);
+    const newFloat = (projectedPrice - costBasis) * SELL_QTY_AT_STOP;
+
+    const extraDays = (latestDT - STOP_DT) / 86400000;
+    const dailyRate = GRID_PROFIT_CLOSED / DURATION_DAYS_CLOSED;
+    const newGridProfit = GRID_PROFIT_CLOSED + dailyRate * Math.max(0, extraDays);
+    const newTotal = newGridProfit + newFloat;
+    const newTotalPct = newTotal / INVESTMENT * 100;
+    const newBalance = INVESTMENT + newTotal;
+    const totalDaysOpen = DURATION_DAYS_CLOSED + Math.max(0, extraDays);
+    const newAnnualized = newTotalPct * (365 / totalDaysOpen);
+
+    // grid-period stats
+    const gridPrices = keys.filter(k => k >= GRID_KEY_START && k <= GRID_KEY_STOP).map(k => data[k]);
+    let peak = gridPrices[0], maxDD = 0;
+    for(const p of gridPrices){ if(p > peak) peak = p; const dd = (p - peak)/peak; if(dd < maxDD) maxDD = dd; }
+    const rets = [];
+    for(let i=1;i<gridPrices.length;i++) rets.push(Math.log(gridPrices[i]/gridPrices[i-1]));
+    const n = rets.length;
+    const meanR = rets.reduce((a,b)=>a+b,0)/n;
+    const m2 = rets.reduce((a,b)=>a+(b-meanR)**2,0)/n;
+    const m3 = rets.reduce((a,b)=>a+(b-meanR)**3,0)/n;
+    const m4 = rets.reduce((a,b)=>a+(b-meanR)**4,0)/n;
+    const varSample = rets.reduce((a,b)=>a+(b-meanR)**2,0)/(n-1);
+    const vol = Math.sqrt(varSample) * Math.sqrt(24*365) * 100;
+    const skew = m3/Math.pow(m2,1.5);
+    const kurt = m4/(m2*m2) - 3;
+    const buyHold = (stopFeedPrice - startFeedPrice)/startFeedPrice*100;
+
+    return {
+      currentPrice, asOf: lastKey.replace('T',' ')+' UTC', pctSinceStop, extraDays, projectedPrice,
+      newGridProfit, newFloat, newTotal, newTotalPct, newBalance, newAnnualized,
+      maxDD: maxDD*100, vol, skew, kurt, buyHold, n, rets, meanR, stdR: Math.sqrt(varSample), keys
+    };
+  }
+
+  // ---- dumbbell comparison chart ----
+  function dumbbellRow(label, closedVal, ongoingVal, min, max, fmtFn){
+    const pct = (val) => Math.max(2, Math.min(98, (val-min)/(max-min)*100));
+    const pc = pct(closedVal), po = pct(ongoingVal);
+    const left = Math.min(pc,po), width = Math.abs(po-pc);
+    return `<div class="dbrow">
+      <div class="dbtop"><span class="lab">${label}</span><span><span class="closed-v mono">${fmtFn(closedVal)}</span><span class="ongoing-v mono">${fmtFn(ongoingVal)}</span></span></div>
+      <div class="dbtrack">
+        <div class="dbline" style="left:${left}%; width:${width}%;"></div>
+        <div class="dbdot closed" style="left:${pc}%;"></div>
+        <div class="dbdot ongoing" style="left:${po}%;"></div>
+      </div>
+    </div>`;
+  }
+  function buildDumbbell(v){
+    const pctFmt = (n)=> (n>=0?'+':'')+n.toFixed(2)+'%';
+    const usdFmt = (n)=> (n>=0?'+':'')+n.toFixed(2);
+    const rows = [
+      dumbbellRow('Total P&amp;L (%)', -16.43, v.newTotalPct, -45, 10, pctFmt),
+      dumbbellRow('Annualized Yield (%)', -31.87, v.newAnnualized, -65, 10, pctFmt),
+      dumbbellRow('Grid P&amp;L (USDT)', 36.92, v.newGridProfit, 0, 60, usdFmt),
+      dumbbellRow('Floating P&amp;L (USDT)', -186.31, v.newFloat, -220, 0, usdFmt),
+    ];
+    document.getElementById('dumbbellWrap').innerHTML = rows.join('');
+  }
+
+  // ---- price path sparkline ----
+  function buildPricePath(v){
+    const keys = v.keys.filter(k => k >= GRID_KEY_START);
+    const step = Math.max(1, Math.floor(keys.length/320));
+    let sampled = keys.filter((_,i)=> i % step === 0);
+    if(sampled[sampled.length-1] !== keys[keys.length-1]) sampled.push(keys[keys.length-1]);
+    const prices = sampled.map(k => LAST_DATA[k]);
+    const min = Math.min(...prices), max = Math.max(...prices);
+    const W = 700, H = 150, pad = 4;
+    const pts = prices.map((p,i)=>{
+      const x = pad + (i/(prices.length-1)) * (W - 2*pad);
+      const y = H - pad - ((p-min)/(max-min)) * (H - 2*pad);
+      return [x,y];
+    });
+    let stopIdx = sampled.findIndex(k => k >= GRID_KEY_STOP);
+    if(stopIdx < 0) stopIdx = sampled.length - 1;
+
+    const seg1 = pts.slice(0, stopIdx+1);
+    const seg2 = pts.slice(stopIdx);
+    const pathStr = (arr) => arr.map((p,i)=> (i===0?'M':'L')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
+    const areaStr = (arr) => pathStr(arr) + ` L${arr[arr.length-1][0].toFixed(1)},${H-pad} L${arr[0][0].toFixed(1)},${H-pad} Z`;
+
+    const entryY = pts[0][1], stopY = pts[stopIdx][1], nowY = pts[pts.length-1][1];
+    const stopX = pts[stopIdx][0];
+
+    const svg = `
+      <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+        <path d="${areaStr(seg1)}" fill="var(--blue)" opacity="0.08" stroke="none"/>
+        <path d="${pathStr(seg1)}" fill="none" stroke="var(--blue)" stroke-width="1.6" vector-effect="non-scaling-stroke"/>
+        <path d="${pathStr(seg2)}" fill="none" stroke="var(--text3)" stroke-width="1.4" stroke-dasharray="4 3" vector-effect="non-scaling-stroke"/>
+        <line x1="${stopX.toFixed(1)}" y1="0" x2="${stopX.toFixed(1)}" y2="${H}" stroke="var(--stroke)" stroke-width="1" stroke-dasharray="2 3"/>
+        <circle cx="${pts[0][0].toFixed(1)}" cy="${entryY.toFixed(1)}" r="3" fill="var(--blue)"/>
+        <circle cx="${stopX.toFixed(1)}" cy="${stopY.toFixed(1)}" r="3" fill="var(--red)"/>
+        <circle cx="${pts[pts.length-1][0].toFixed(1)}" cy="${nowY.toFixed(1)}" r="3" fill="var(--text1)"/>
+      </svg>`;
+    document.getElementById('ppWrap').innerHTML = svg;
+    document.getElementById('ppWrap').insertAdjacentHTML('beforeend',
+      `<div class="pp-caption mono"><span>Low ${min.toLocaleString(undefined,{maximumFractionDigits:0})}</span><span>High ${max.toLocaleString(undefined,{maximumFractionDigits:0})}</span></div>`);
+  }
+
+  // ---- return distribution histogram with normal overlay ----
+  function buildHistogram(v){
+    const rets = v.rets, meanR = v.meanR, stdR = v.stdR, n = rets.length;
+    const min = Math.min(...rets), max = Math.max(...rets);
+    const bins = 27;
+    const width = (max-min)/bins;
+    const counts = new Array(bins).fill(0);
+    rets.forEach(r=>{ let idx = Math.floor((r-min)/width); if(idx>=bins) idx=bins-1; if(idx<0) idx=0; counts[idx]++; });
+    const maxCount = Math.max(...counts);
+
+    let bars = '';
+    const curvePts = [];
+    for(let i=0;i<bins;i++){
+      const binCenter = min + (i+0.5)*width;
+      const h = counts[i]/maxCount*100;
+      const isTail = Math.abs((binCenter-meanR)/stdR) > 2;
+      bars += `<div class="histbar${isTail?' tail':''}" style="height:${h.toFixed(1)}%;"></div>`;
+      const pdf = (1/(stdR*Math.sqrt(2*Math.PI))) * Math.exp(-0.5*Math.pow((binCenter-meanR)/stdR,2));
+      const expected = n*width*pdf;
+      const curveH = Math.min(100, expected/maxCount*100);
+      const x = (i+0.5)/bins*100;
+      curvePts.push([x, 100-curveH]);
+    }
+    const curvePath = curvePts.map((p,i)=> (i===0?'M':'L')+p[0].toFixed(2)+','+p[1].toFixed(2)).join(' ');
+
+    document.getElementById('histWrap').innerHTML = bars +
+      `<svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute; inset:0; width:100%; height:100%; pointer-events:none;">
+        <path d="${curvePath}" fill="none" stroke="var(--text1)" stroke-width="1.3" vector-effect="non-scaling-stroke"/>
+      </svg>`;
+    document.getElementById('histAxis').innerHTML =
+      `<span>${(min*100).toFixed(2)}%/h</span><span>0%</span><span>+${(max*100).toFixed(2)}%/h</span>`;
+  }
+
+  function buildVisuals(v){
+    buildDumbbell(v);
+    buildPricePath(v);
+    buildHistogram(v);
+  }
+
+  let LAST_DATA = null;
+  const statusEl = document.getElementById('fetchStatus');
+  const statusText = document.getElementById('fetchStatusText');
+  const liveDot = document.getElementById('liveDot');
+
+  fetch(RAW_URL)
+    .then(r => { if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(data => {
+      LAST_DATA = data;
+      const v = computeFromData(data);
+      renderOngoingAndCompare(v);
+      buildVisuals(v);
+      statusEl.classList.add('ok');
+      statusText.textContent = 'Live · fetched ' + Object.keys(data).length.toLocaleString() + ' hourly points · latest ' + v.asOf;
+      liveDot.style.display = 'inline-block';
+    })
+    .catch(err => {
+      renderOngoingAndCompare(FALLBACK);
+      document.getElementById('dumbbellWrap').innerHTML = '<div class="note">Visual comparison needs live data — unavailable right now.</div>';
+      document.getElementById('ppWrap').innerHTML = '<div class="note">Price path needs live data — unavailable right now.</div>';
+      document.getElementById('histWrap').innerHTML = '<div class="note">Distribution needs live data — unavailable right now.</div>';
+      statusEl.classList.add('err');
+      statusText.textContent = 'Live fetch unavailable — showing cached figures as of 2026-08-18.';
+    });
+</script>
+</body>
+</html>
