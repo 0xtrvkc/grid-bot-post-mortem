@@ -10,7 +10,7 @@ Open [`index.html`](./index.html) or https://0xtrvkc.github.io/grid-bot-post-mor
 
 ## What it does
 
-The report has three tabs:
+The report has four tabs:
 
 **Closed (Actual)**
 The trade as it actually happened — grid mechanics, position ledger, cash flow bridge (investment → grid profit → floating loss → ending balance), grid range position, cash-flow breakeven runway, and a return-attribution breakdown separating the grid's own trading edge from directional BTC exposure.
@@ -18,8 +18,11 @@ The trade as it actually happened — grid mechanics, position ledger, cash flow
 **Ongoing (What-If)**
 Simulates the same position had it never been canceled. On every page load it fetches an hourly BTC price feed, marks the held inventory to the current price, and extends the realized grid profit forward at its historical pace. Nothing here is a re-opened position — it's a projection to answer one question: did canceling lock in a worse outcome than letting the cash flow run?
 
+**Risk Lab**
+Stress-tests the cancellation decision with explicit controls for horizon, BTC price move, grid activity, equity stop, and out-of-grid buffer. The model separates inventory P&L from grid cash flow and reports whether an equity guard, range guard, both, or neither would trigger. It is a terminal sensitivity test, not a path-by-path backtest.
+
 **Compare & Stats**
-Closed vs. Ongoing side by side, plus real quant statistics computed from the live-fetched hourly series: max drawdown, annualized volatility, skewness, excess kurtosis, a buy-and-hold benchmark for the same window, and the grid's alpha over it. Visualized with a dumbbell comparison chart, a real price-path sparkline, and a return-distribution histogram with a fitted normal curve overlaid.
+Closed vs. Ongoing side by side, plus real quant statistics computed from the live-fetched hourly series: max drawdown, annualized volatility, downside volatility, historical VaR/CVaR, worst hour, skewness, excess kurtosis, a buy-and-hold benchmark for the same window, and the grid's alpha over it. Visualized with a dumbbell comparison chart, a real price-path sparkline, and a return-distribution histogram with a fitted normal curve overlaid.
 
 ## Data sources
 
@@ -33,6 +36,16 @@ Closed vs. Ongoing side by side, plus real quant statistics computed from the li
 - Apple-style quant report aesthetic: quiet, monospace tabular numbers, light theme by default with a day/night toggle.
 - Dollar amounts are hidden by default and shown as percentages of capital instead — the underlying figures stay in the page source but aren't rendered, so the page is safe to screenshot or share without exposing account size.
 - All charts (range map, cash flow bridge, dumbbell comparison, price sparkline, return histogram) are hand-built with CSS/SVG — no charting library, so nothing depends on a CDN being reachable.
+- Responsive two-column mobile summaries, keyboard-accessible tabs, saved theme preference, reduced-motion support, and explicit live-feed freshness reporting.
+
+## QuantDinger-inspired risk model
+
+The upgrade borrows a grid-specific risk distinction from [QuantDinger](https://github.com/OpenByteInc/QuantDinger):
+
+- Equity stops evaluate the whole strategy account (realized grid cash flow plus open inventory), not price versus a moving average entry.
+- Out-of-grid protection is a separate structural guard with a configurable buffer around the grid boundaries.
+
+The implementation is original, browser-only, and uses no QuantDinger backend code or branding.
 
 ## Tech stack
 
