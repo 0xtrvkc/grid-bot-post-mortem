@@ -87,6 +87,7 @@
   .tabbtn .live-dot{display:inline-block; width:5px; height:5px; border-radius:50%; background:var(--green); margin-left:6px; vertical-align:middle; opacity:0.9;}
   .tabpanel{display:none;}
   .tabpanel.active{display:block;}
+  .tabbtn:focus-visible,.icon-toggle:focus-visible,.scenario-input:focus-visible{outline:2px solid var(--blue); outline-offset:3px;}
   .fetch-status{font-size:10.5px; color:var(--text3); margin-top:12px; display:flex; align-items:center; gap:6px;}
   .fetch-status .sp{width:6px; height:6px; border-radius:50%; background:var(--text3);}
   .fetch-status.ok .sp{background:var(--green);}
@@ -193,9 +194,51 @@
   .histbar.tail{background:var(--red); opacity:0.6;}
   .histaxis{display:flex; justify-content:space-between; font-size:9.5px; color:var(--text3); margin-top:6px;}
 
+  /* ---------- risk lab ---------- */
+  .lab-intro{display:flex; justify-content:space-between; gap:18px; align-items:flex-start;}
+  .lab-intro p{font-size:12px; color:var(--text2); line-height:1.65; max-width:680px;}
+  .model-badge{display:inline-flex; align-items:center; gap:7px; flex-shrink:0; padding:7px 10px; border:1px solid rgba(90,169,255,.28); border-radius:999px; color:var(--blue); background:rgba(90,169,255,.08); font-size:10px; font-weight:700; letter-spacing:.55px; text-transform:uppercase;}
+  .model-badge::before{content:""; width:6px; height:6px; border-radius:50%; background:currentColor;}
+  .control-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:12px;}
+  .control{padding:13px 14px; border-radius:11px; background:var(--track);}
+  .control-head{display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-bottom:10px;}
+  .control label{font-size:11px; color:var(--text2); font-weight:600;}
+  .control output{font-size:12px; color:var(--text1); font-weight:700;}
+  .scenario-input{width:100%; accent-color:var(--blue); cursor:pointer;}
+  .scale{display:flex; justify-content:space-between; margin-top:6px; color:var(--text3); font-size:9px;}
+  .scenario-results{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:14px;}
+  .result-card{padding:13px; border:1px solid var(--stroke); border-radius:11px; min-width:0;}
+  .result-card .l{font-size:9.5px; color:var(--text3); text-transform:uppercase; letter-spacing:.55px; font-weight:600;}
+  .result-card .v{font-size:16px; margin-top:6px; font-weight:700; overflow-wrap:anywhere;}
+  .result-card .v.pos{color:var(--green);}
+  .result-card .v.neg{color:var(--red);}
+  .risk-flag{display:flex; gap:10px; align-items:flex-start; margin-top:12px; padding:12px 13px; border-radius:11px; border:1px solid var(--stroke); background:var(--track); font-size:11.5px; line-height:1.55; color:var(--text2);}
+  .risk-flag .signal{width:8px; height:8px; border-radius:50%; background:var(--text3); margin-top:5px; flex-shrink:0;}
+  .risk-flag.safe .signal{background:var(--green);}
+  .risk-flag.warn .signal{background:#FFB340;}
+  .risk-flag.danger .signal{background:var(--red);}
+  .scenario-table-wrap{overflow-x:auto; -webkit-overflow-scrolling:touch;}
+  .source-row{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;}
+  .source-chip{padding:5px 8px; border:1px solid var(--stroke); border-radius:7px; font-size:9.5px; color:var(--text3);}
+
   footer{margin-top:20px; font-size:10.5px; color:var(--text3); line-height:1.6;}
 
-  @media(max-width:760px){ .grid2{grid-template-columns:1fr;} .ticker{flex-wrap:wrap;} .tick{flex:1 1 33%; border-left:none; border-top:1px solid var(--stroke);} }
+  @media(max-width:760px){
+    body{padding-top:18px;}
+    .page{padding:0 16px;}
+    .grid2{grid-template-columns:1fr;}
+    .ticker{display:grid; grid-template-columns:repeat(2,minmax(0,1fr));}
+    .tick{border-left:none; border-top:1px solid var(--stroke); min-width:0;}
+    .tick:nth-child(even){border-left:1px solid var(--stroke);}
+    .tabnav{overflow-x:auto; scrollbar-width:none; position:sticky; top:0; z-index:10; background:var(--bg); padding-top:4px;}
+    .tabnav::-webkit-scrollbar{display:none;}
+    .tabbtn{white-space:nowrap; margin-right:12px;}
+    .control-grid{grid-template-columns:1fr;}
+    .scenario-results{grid-template-columns:repeat(2,1fr);}
+    .lab-intro{display:block;}
+    .model-badge{margin-top:12px;}
+  }
+  @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important; transition:none!important;}}
 </style>
 </head>
 <body>
@@ -217,13 +260,14 @@
   </div>
 
   <!-- ===== TABS ===== -->
-  <div class="tabnav">
-    <button class="tabbtn active" data-tab="closed">Closed (Actual)</button>
-    <button class="tabbtn" data-tab="ongoing">Ongoing (What-If)<span class="live-dot" id="liveDot" style="display:none;"></span></button>
-    <button class="tabbtn" data-tab="compare">Compare &amp; Stats</button>
+  <div class="tabnav" role="tablist" aria-label="Report sections">
+    <button class="tabbtn active" role="tab" aria-selected="true" aria-controls="tab-closed" data-tab="closed">Closed (Actual)</button>
+    <button class="tabbtn" role="tab" aria-selected="false" aria-controls="tab-ongoing" data-tab="ongoing">Ongoing (What-If)<span class="live-dot" id="liveDot" style="display:none;"></span></button>
+    <button class="tabbtn" role="tab" aria-selected="false" aria-controls="tab-risk" data-tab="risk">Risk Lab</button>
+    <button class="tabbtn" role="tab" aria-selected="false" aria-controls="tab-compare" data-tab="compare">Compare &amp; Stats</button>
   </div>
 
-  <div id="tab-closed" class="tabpanel active">
+  <div id="tab-closed" class="tabpanel active" role="tabpanel">
 
   <!-- ===== TOP: GRID MECHANICS + POSITION LEDGER ===== -->
   <div class="grid2">
@@ -431,11 +475,27 @@
     </div>
   </div>
 
+  <div class="panel" style="margin-top:14px;">
+    <h2>Risk-Control Audit</h2>
+    <div class="scenario-table-wrap">
+      <table>
+        <thead><tr><th>Control</th><th>What happened</th><th class="r">Post-mortem</th></tr></thead>
+        <tbody>
+          <tr><td class="lbl">Equity stop</td><td>Total account return reached −16.43%</td><td class="r neg">Missing / too loose</td></tr>
+          <tr><td class="lbl">Out-of-grid guard</td><td>Stop price remained 17.5% above the 54,000 floor</td><td class="r">Not triggered</td></tr>
+          <tr><td class="lbl">Inventory cap</td><td>Held BTC grew to 2.02× the initial buy</td><td class="r neg">Primary risk</td></tr>
+          <tr><td class="lbl">Time stop</td><td>Cash-flow breakeven required ≈949 days</td><td class="r neg">Economically weak</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note">A grid-specific stop should be defined on total strategy equity—not simply price versus a moving average entry. Range escape is a separate protection. This distinction follows the risk architecture used by QuantDinger.</div>
+  </div>
+
   </div>
   <!-- /tab-closed -->
 
   <!-- ===== ONGOING (WHAT-IF) TAB ===== -->
-  <div id="tab-ongoing" class="tabpanel">
+  <div id="tab-ongoing" class="tabpanel" role="tabpanel">
 
     <!-- ===== TOP: LIVE REFERENCE + PROJECTION BASIS ===== -->
     <div class="grid2">
@@ -629,8 +689,86 @@
   </div>
   <!-- /tab-ongoing -->
 
+  <!-- ===== RISK LAB TAB ===== -->
+  <div id="tab-risk" class="tabpanel" role="tabpanel">
+    <div class="panel">
+      <div class="lab-intro">
+        <div>
+          <h2>Decision Stress Test</h2>
+          <p>Recreate the cancellation decision with explicit assumptions. Price risk and grid cash flow are modeled separately, then checked against an equity stop and an out-of-grid guard. This is a terminal scenario—not a path-by-path backtest.</p>
+        </div>
+        <span class="model-badge">Grid-aware risk model</span>
+      </div>
+
+      <div class="control-grid" style="margin-top:16px;">
+        <div class="control">
+          <div class="control-head"><label for="riskHorizon">Horizon after stop</label><output id="riskHorizonOut" for="riskHorizon">180 days</output></div>
+          <input class="scenario-input" id="riskHorizon" type="range" min="30" max="730" step="30" value="180">
+          <div class="scale mono"><span>30d</span><span>2y</span></div>
+        </div>
+        <div class="control">
+          <div class="control-head"><label for="riskPrice">BTC move from stop</label><output id="riskPriceOut" for="riskPrice">0%</output></div>
+          <input class="scenario-input" id="riskPrice" type="range" min="-50" max="60" step="1" value="0">
+          <div class="scale mono"><span>−50%</span><span>+60%</span></div>
+        </div>
+        <div class="control">
+          <div class="control-head"><label for="riskActivity">Grid activity vs. history</label><output id="riskActivityOut" for="riskActivity">100%</output></div>
+          <input class="scenario-input" id="riskActivity" type="range" min="0" max="150" step="5" value="100">
+          <div class="scale mono"><span>idle</span><span>1.5×</span></div>
+        </div>
+        <div class="control">
+          <div class="control-head"><label for="riskStop">Equity stop</label><output id="riskStopOut" for="riskStop">−15%</output></div>
+          <input class="scenario-input" id="riskStop" type="range" min="5" max="35" step="1" value="15">
+          <div class="scale mono"><span>−5%</span><span>−35%</span></div>
+        </div>
+        <div class="control">
+          <div class="control-head"><label for="riskBuffer">Out-of-grid buffer</label><output id="riskBufferOut" for="riskBuffer">5%</output></div>
+          <input class="scenario-input" id="riskBuffer" type="range" min="0" max="15" step="1" value="5">
+          <div class="scale mono"><span>at boundary</span><span>15%</span></div>
+        </div>
+        <div class="control">
+          <div class="control-head"><label>Scenario basis</label><output>Stop date</output></div>
+          <div style="font-size:11px; color:var(--text3); line-height:1.55;">63,474.54 reference price<br>0.00881 BTC inventory</div>
+        </div>
+      </div>
+
+      <div class="scenario-results mono" aria-live="polite">
+        <div class="result-card"><div class="l">Terminal BTC</div><div class="v neu" id="riskTerminalPrice">—</div></div>
+        <div class="result-card"><div class="l">Grid cash flow</div><div class="v pos" id="riskGridProfit">—</div></div>
+        <div class="result-card"><div class="l">Inventory P&amp;L</div><div class="v neg" id="riskInventoryPnl">—</div></div>
+        <div class="result-card"><div class="l">Total return</div><div class="v neg" id="riskTotalReturn">—</div></div>
+      </div>
+      <div class="risk-flag" id="riskFlag"><span class="signal"></span><div>Move a control to run the scenario.</div></div>
+      <div class="note">Grid cash flow extends the observed 0.196 USDT/day rate by your activity assumption. It does not infer the path, fills, fees, inventory changes, or whether price remained inside the band throughout the horizon.</div>
+    </div>
+
+    <div class="grid2">
+      <div class="panel">
+        <h2>Protection Geometry</h2>
+        <table class="mono">
+          <tbody>
+            <tr><td class="lbl">Buffered lower exit</td><td class="r" id="riskLowerExit">—</td></tr>
+            <tr><td class="lbl">Grid floor</td><td class="r">54,000</td></tr>
+            <tr><td class="lbl">Grid ceiling</td><td class="r">120,000</td></tr>
+            <tr><td class="lbl">Buffered upper exit</td><td class="r" id="riskUpperExit">—</td></tr>
+            <tr><td class="lbl">Terminal band state</td><td class="r" id="riskBandState">—</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="panel">
+        <h2>What This Changes</h2>
+        <div class="vlist">
+          <div class="vitem"><span class="vidx mono">01</span><div>Judge the bot on <b>total equity</b>, including realized grid cash flow and open inventory.</div></div>
+          <div class="vitem"><span class="vidx mono">02</span><div>Use a separate <b>range-escape rule</b>; widening the band is not a substitute for loss control.</div></div>
+          <div class="vitem"><span class="vidx mono">03</span><div>Treat continued grid profit as an <b>assumption</b>, not a guaranteed linear income stream.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- /tab-risk -->
+
   <!-- ===== COMPARE & STATS TAB ===== -->
-  <div id="tab-compare" class="tabpanel">
+  <div id="tab-compare" class="tabpanel" role="tabpanel">
 
     <div class="panel">
       <h2>Closed vs. Ongoing</h2>
@@ -679,8 +817,12 @@
         <div class="statcard"><div class="l">Grid Strategy Return</div><div class="v neg">−16.43%</div></div>
         <div class="statcard"><div class="l">Grid Alpha vs. B&amp;H</div><div class="v pos" id="statAlpha">+12.79 pts</div></div>
         <div class="statcard"><div class="l">Sample Size (n hourly)</div><div class="v neu" id="statN">4,516</div></div>
+        <div class="statcard"><div class="l">Hourly VaR (95%)</div><div class="v neg" id="statVaR">—</div></div>
+        <div class="statcard"><div class="l">Hourly CVaR (95%)</div><div class="v neg" id="statCVaR">—</div></div>
+        <div class="statcard"><div class="l">Downside Volatility</div><div class="v neu" id="statDownside">—</div></div>
+        <div class="statcard"><div class="l">Worst Hour</div><div class="v neg" id="statWorst">—</div></div>
       </div>
-      <div class="note">Volatility, skew and kurtosis are computed on hourly log returns of the independent BTC index during the grid's operating window. Excess kurtosis of <b class="mono">8.15</b> confirms the well-known fat-tail behavior of crypto returns — the grid's small, frequent profits sit inside a distribution with occasional very large moves, which is exactly the tail risk that produced the −30.87% directional loss here. Negative skew (<b class="mono">−0.29</b>) indicates down-moves during this window were somewhat sharper than up-moves. The grid still beat naive buy-and-hold by roughly <b class="mono" id="statAlphaInline">12.8 points</b> over the same window, since it harvested cash flow on the way down instead of doing nothing.</div>
+      <div class="note">Price-risk statistics use hourly log returns from the independent BTC index during the grid window; they describe the underlying, not a reconstructed strategy equity curve. VaR is the historical 5th percentile and CVaR is the average return beyond it. The grid still beat naive buy-and-hold by roughly <b class="mono" id="statAlphaInline">12.8 points</b> over the same window because it harvested cash flow while price fell.</div>
     </div>
 
     <div class="panel" style="margin-top:14px;">
@@ -697,7 +839,7 @@
   </div>
   <!-- /tab-compare -->
 
-  <footer>Closed-tab figures are from the exchange's PnL / History / Details screens. Ongoing and Compare tabs are computed live in your browser from an independent hourly BTC index (<span class="mono">github.com/0xtrvkc/dynamic-btc-analytics-dashboard</span>), re-fetched on every page load — treat them as an analytical estimate, not an exchange-confirmed figure. The range map plots only the two recorded prices (grid start, average stop-sell), not a reconstructed tick chart.</footer>
+  <footer>Closed-tab figures are from the exchange's PnL / History / Details screens. Ongoing, Risk Lab, and Compare figures are computed locally in your browser. Live market data comes from an independent hourly BTC index (<span class="mono">github.com/0xtrvkc/dynamic-btc-analytics-dashboard</span>) and is not exchange-confirmed. Scenario results are sensitivity tests, not forecasts or reconstructed fills.</footer>
 
 </div>
 
@@ -718,23 +860,36 @@
   const themeIcon = document.getElementById('themeIcon');
   const MOON = '<path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/>';
   const SUN = '<circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/>';
-  let theme = 'light';
+  let theme = localStorage.getItem('grid-report-theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
   function applyTheme(){
     root.setAttribute('data-theme', theme);
     themeIcon.innerHTML = theme === 'dark' ? MOON : SUN;
   }
-  themeBtn.addEventListener('click', ()=>{ theme = theme === 'dark' ? 'light' : 'dark'; applyTheme(); });
+  themeBtn.addEventListener('click', ()=>{
+    theme = theme === 'dark' ? 'light' : 'dark';
+    localStorage.setItem('grid-report-theme', theme);
+    applyTheme();
+  });
   applyTheme();
 
   // ---- tabs ----
   const tabBtns = document.querySelectorAll('.tabbtn');
   const tabPanels = document.querySelectorAll('.tabpanel');
+  function activateTab(btn){
+    tabBtns.forEach(b=>{ b.classList.remove('active'); b.setAttribute('aria-selected','false'); });
+    tabPanels.forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    btn.setAttribute('aria-selected','true');
+    document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+  }
   tabBtns.forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      tabBtns.forEach(b=>b.classList.remove('active'));
-      tabPanels.forEach(p=>p.classList.remove('active'));
-      btn.classList.add('active');
-      document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+    btn.addEventListener('click', ()=>activateTab(btn));
+    btn.addEventListener('keydown', e=>{
+      if(!['ArrowLeft','ArrowRight'].includes(e.key)) return;
+      e.preventDefault();
+      const list = [...tabBtns], current = list.indexOf(btn);
+      const next = list[(current + (e.key==='ArrowRight'?1:-1) + list.length) % list.length];
+      activateTab(next); next.focus();
     });
   });
 
@@ -754,8 +909,11 @@
   const FLOAT_AT_STOP = -186.31;
   const SELL_QTY_AT_STOP = 0.00881;
   const STOP_PRICE_EXCHANGE = 63474.54;
-  const START_DT = new Date('2026-01-07T16:38:07');
-  const STOP_DT = new Date('2026-07-14T19:33:35');
+  const COST_BASIS = STOP_PRICE_EXCHANGE - (FLOAT_AT_STOP / SELL_QTY_AT_STOP);
+  const GRID_FLOOR = 54000;
+  const GRID_CEILING = 120000;
+  const START_DT = new Date('2026-01-07T16:38:07Z');
+  const STOP_DT = new Date('2026-07-14T19:33:35Z');
   const DURATION_DAYS_CLOSED = (STOP_DT - START_DT) / 86400000;
   const GRID_KEY_START = '2026-01-07T16:00';
   const GRID_KEY_STOP  = '2026-07-14T19:00';
@@ -763,10 +921,11 @@
 
   // ---- fallback figures (precomputed, used if live fetch fails) ----
   const FALLBACK = {
-    currentPrice: 64405.06, asOf: '2026-08-18 00:00 UTC', pctSinceStop: -0.19, projectedPrice: 63355.24,
-    extraDays: 34.19, newGridProfit: 43.63, newFloat: -187.36, newTotal: -143.73,
-    newBalance: 765.87, newTotalPct: -15.80, newAnnualized: -25.94,
-    maxDD: -40.39, vol: 46.65, skew: -0.29, kurt: 8.15, buyHold: -29.22, n: 4516
+    currentPrice: 77895.84, asOf: '2026-09-15 01:00 UTC', pctSinceStop: 20.72, projectedPrice: 76626.40,
+    extraDays: 62.23, newGridProfit: 49.13, newFloat: -70.44, newTotal: -21.31,
+    newBalance: 888.29, newTotalPct: -2.34, newAnnualized: -3.42,
+    maxDD: -40.39, vol: 46.65, skew: -0.29, kurt: 8.15, buyHold: -29.22, n: 4515,
+    var95: -0.74, cvar95: -1.21, downsideVol: 33.76, worstHour: -4.90
   };
 
   function nearestValue(sortedKeys, dataObj, targetKey){
@@ -775,6 +934,61 @@
     while(lo<hi){ const mid=(lo+hi)>>1; if(sortedKeys[mid] < targetKey) lo=mid+1; else hi=mid; }
     return dataObj[sortedKeys[lo]];
   }
+
+  // ---- grid-aware scenario lab ----
+  function computeScenario({horizonDays, priceMovePct, activityPct, equityStopPct, bufferPct}){
+    const terminalPrice = STOP_PRICE_EXCHANGE * (1 + priceMovePct/100);
+    const dailyRate = GRID_PROFIT_CLOSED / DURATION_DAYS_CLOSED;
+    const gridProfit = GRID_PROFIT_CLOSED + dailyRate * horizonDays * (activityPct/100);
+    const inventoryPnl = (terminalPrice - COST_BASIS) * SELL_QTY_AT_STOP;
+    const totalPnl = gridProfit + inventoryPnl;
+    const totalReturn = totalPnl / INVESTMENT * 100;
+    const lowerExit = GRID_FLOOR * (1 - bufferPct/100);
+    const upperExit = GRID_CEILING * (1 + bufferPct/100);
+    const rangeExit = terminalPrice < lowerExit || terminalPrice > upperExit;
+    const equityExit = totalReturn <= -equityStopPct;
+    const bandState = terminalPrice < GRID_FLOOR ? 'Below grid' : terminalPrice > GRID_CEILING ? 'Above grid' : 'Inside grid';
+    return {terminalPrice, gridProfit, inventoryPnl, totalPnl, totalReturn, lowerExit, upperExit, rangeExit, equityExit, bandState};
+  }
+
+  const riskInputs = ['riskHorizon','riskPrice','riskActivity','riskStop','riskBuffer'];
+  function renderRiskLab(){
+    const args = {
+      horizonDays:+document.getElementById('riskHorizon').value,
+      priceMovePct:+document.getElementById('riskPrice').value,
+      activityPct:+document.getElementById('riskActivity').value,
+      equityStopPct:+document.getElementById('riskStop').value,
+      bufferPct:+document.getElementById('riskBuffer').value
+    };
+    const s = computeScenario(args);
+    document.getElementById('riskHorizonOut').textContent = args.horizonDays+' days';
+    document.getElementById('riskPriceOut').textContent = fmt(args.priceMovePct,0)+'%';
+    document.getElementById('riskActivityOut').textContent = args.activityPct+'%';
+    document.getElementById('riskStopOut').textContent = '−'+args.equityStopPct+'%';
+    document.getElementById('riskBufferOut').textContent = args.bufferPct+'%';
+    document.getElementById('riskTerminalPrice').textContent = s.terminalPrice.toLocaleString(undefined,{maximumFractionDigits:0});
+    document.getElementById('riskGridProfit').textContent = fmt(s.gridProfit/INVESTMENT*100)+'%';
+    document.getElementById('riskInventoryPnl').textContent = fmt(s.inventoryPnl/INVESTMENT*100)+'%';
+    document.getElementById('riskTotalReturn').textContent = fmt(s.totalReturn)+'%';
+    document.getElementById('riskTotalReturn').className = 'v '+(s.totalReturn>=0?'pos':'neg');
+    document.getElementById('riskInventoryPnl').className = 'v '+(s.inventoryPnl>=0?'pos':'neg');
+    document.getElementById('riskLowerExit').textContent = s.lowerExit.toLocaleString(undefined,{maximumFractionDigits:0});
+    document.getElementById('riskUpperExit').textContent = s.upperExit.toLocaleString(undefined,{maximumFractionDigits:0});
+    document.getElementById('riskBandState').textContent = s.bandState;
+    const flag = document.getElementById('riskFlag');
+    flag.className = 'risk-flag '+(s.rangeExit || s.equityExit ? 'danger' : s.bandState==='Inside grid' ? 'safe' : 'warn');
+    if(s.rangeExit && s.equityExit){
+      flag.lastElementChild.textContent = `Both guards trip: terminal price escapes the buffered range and total equity breaches −${args.equityStopPct}%. A risk-controlled bot would have exited before accepting this terminal state.`;
+    }else if(s.rangeExit){
+      flag.lastElementChild.textContent = 'Range guard trips: terminal price is beyond the buffered grid. The equity result alone would miss this structural regime break.';
+    }else if(s.equityExit){
+      flag.lastElementChild.textContent = `Equity stop trips at −${args.equityStopPct}%. Grid cash flow does not offset the inventory loss quickly enough.`;
+    }else{
+      flag.lastElementChild.textContent = `No configured guard trips at the terminal point. Ending balance is ${(100+s.totalReturn).toFixed(2)}% of starting capital.`;
+    }
+  }
+  riskInputs.forEach(id=>document.getElementById(id).addEventListener('input',renderRiskLab));
+  renderRiskLab();
 
   function renderOngoingAndCompare(v){
     // ---- ongoing tab ----
@@ -871,6 +1085,10 @@
     document.getElementById('statKurt').textContent = fmtPlain(v.kurt);
     document.getElementById('statBH').textContent = fmt(v.buyHold)+'%';
     document.getElementById('statN').textContent = v.n.toLocaleString();
+    document.getElementById('statVaR').textContent = fmt(v.var95)+'%';
+    document.getElementById('statCVaR').textContent = fmt(v.cvar95)+'%';
+    document.getElementById('statDownside').textContent = fmtPlain(v.downsideVol)+'%';
+    document.getElementById('statWorst').textContent = fmt(v.worstHour)+'%';
     const alpha = -16.43 - v.buyHold;
     document.getElementById('statAlpha').textContent = fmt(alpha)+' pts';
     document.getElementById('statAlphaInline').textContent = fmtPlain(Math.abs(alpha),1)+' points';
@@ -882,14 +1100,13 @@
     const keys = Object.keys(data).sort();
     const lastKey = keys[keys.length-1];
     const currentPrice = data[lastKey];
-    const latestDT = new Date(lastKey);
+    const latestDT = new Date(lastKey+'Z');
     const stopFeedPrice = nearestValue(keys, data, GRID_KEY_STOP);
     const startFeedPrice = nearestValue(keys, data, GRID_KEY_START);
 
     const pctSinceStop = (currentPrice - stopFeedPrice) / stopFeedPrice * 100;
     const projectedPrice = STOP_PRICE_EXCHANGE * (1 + pctSinceStop/100);
-    const costBasis = STOP_PRICE_EXCHANGE - (FLOAT_AT_STOP / SELL_QTY_AT_STOP);
-    const newFloat = (projectedPrice - costBasis) * SELL_QTY_AT_STOP;
+    const newFloat = (projectedPrice - COST_BASIS) * SELL_QTY_AT_STOP;
 
     const extraDays = (latestDT - STOP_DT) / 86400000;
     const dailyRate = GRID_PROFIT_CLOSED / DURATION_DAYS_CLOSED;
@@ -916,11 +1133,19 @@
     const skew = m3/Math.pow(m2,1.5);
     const kurt = m4/(m2*m2) - 3;
     const buyHold = (stopFeedPrice - startFeedPrice)/startFeedPrice*100;
+    const sortedRets = [...rets].sort((a,b)=>a-b);
+    const varIndex = Math.floor(0.05*(sortedRets.length-1));
+    const var95 = sortedRets[varIndex] * 100;
+    const tailRets = sortedRets.slice(0,varIndex+1);
+    const cvar95 = tailRets.reduce((a,b)=>a+b,0)/tailRets.length * 100;
+    const downsideVol = Math.sqrt(rets.filter(r=>r<0).reduce((a,r)=>a+r*r,0)/n) * Math.sqrt(24*365) * 100;
+    const worstHour = sortedRets[0] * 100;
 
     return {
       currentPrice, asOf: lastKey.replace('T',' ')+' UTC', pctSinceStop, extraDays, projectedPrice,
       newGridProfit, newFloat, newTotal, newTotalPct, newBalance, newAnnualized,
-      maxDD: maxDD*100, vol, skew, kurt, buyHold, n, rets, meanR, stdR: Math.sqrt(varSample), keys
+      maxDD: maxDD*100, vol, skew, kurt, buyHold, n, var95, cvar95, downsideVol, worstHour,
+      rets, meanR, stdR: Math.sqrt(varSample), keys
     };
   }
 
@@ -1040,9 +1265,11 @@
       const v = computeFromData(data);
       renderOngoingAndCompare(v);
       buildVisuals(v);
-      statusEl.classList.add('ok');
-      statusText.textContent = 'Live · fetched ' + Object.keys(data).length.toLocaleString() + ' hourly points · latest ' + v.asOf;
+      const ageHours = Math.max(0,(Date.now()-new Date(Object.keys(data).sort().at(-1)+'Z'))/3600000);
+      statusEl.classList.add(ageHours>48?'err':'ok');
+      statusText.textContent = (ageHours>48?'Stale feed':'Live index') + ' · ' + Object.keys(data).length.toLocaleString() + ' hourly points · latest ' + v.asOf + ' · ' + Math.round(ageHours) + 'h old';
       liveDot.style.display = 'inline-block';
+      if(ageHours>48) liveDot.style.background = 'var(--red)';
     })
     .catch(err => {
       renderOngoingAndCompare(FALLBACK);
@@ -1050,7 +1277,7 @@
       document.getElementById('ppWrap').innerHTML = '<div class="note">Price path needs live data — unavailable right now.</div>';
       document.getElementById('histWrap').innerHTML = '<div class="note">Distribution needs live data — unavailable right now.</div>';
       statusEl.classList.add('err');
-      statusText.textContent = 'Live fetch unavailable — showing cached figures as of 2026-08-18.';
+      statusText.textContent = 'Live fetch unavailable — showing cached figures as of 2026-09-15.';
     });
 </script>
 </body>
