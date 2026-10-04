@@ -1,6 +1,6 @@
 # BTC/USDT Spot Grid — Quant Post-Trade Report
 
-A single-file, self-contained HTML report that dissects a canceled BTC/USDT spot grid bot's performance — and then asks "what if it hadn't been canceled?" using live BTC price data.
+A static HTML report that dissects a canceled BTC/USDT spot grid bot's performance — and then asks "what if it hadn't been canceled?" using live BTC price data.
 
 No build step, no backend, no dependencies. Open the HTML file in a browser and it does the rest, including fetching live price data on every load.
 
@@ -49,7 +49,7 @@ The implementation is original, browser-only, and uses no QuantDinger backend co
 
 ## Tech stack
 
-Plain HTML, CSS, and vanilla JavaScript. No frameworks, no build tools, no npm install. Just open the file.
+Plain HTML, CSS, and vanilla JavaScript (`index.html` and `price-stats.js`). No frameworks, no build tools, no npm install. Just open the file.
 
 ## Disclaimer
 
@@ -58,3 +58,17 @@ This is a personal post-trade analysis tool, not financial advice. The "Ongoing"
 ## License
 
 MIT (or your preference — update this section before publishing).
+
+## Hourly data integrity and price-index robustness
+
+Only finite, positive numeric prices at valid UTC hourly timestamps enter the calculation. Start and stop anchors must be present: an unavailable anchor cannot silently jump to a later price. Feeds that end before cancellation or contain too few adjacent returns use the explicitly dated cached view. Volatility, VaR/CVaR, moments and worst-hour figures use adjacent hourly log returns; multi-hour gaps are excluded and counted. Observed maximum drawdown remains a sampled-price drawdown across all valid observed closes, including across gaps; intrahour extremes are unknown. Flat returns have undefined skewness/kurtosis and no normal-fit overlay.
+
+Compare & Stats adds 1,000 reproducible 24-hour moving-block resamples (seed 20261004). Full blocks never cross gaps. At least 48 adjacent hourly returns and 24 eligible block starts are required. Returns in shorter segments are not eligible for full blocks; eligible-return count and sampled horizon are disclosed. Each simulated path has the observed count of adjacent returns, with the initial value included in its drawdown peak. The panel displays 2.5th–97.5th return percentiles and the 95th percentile of positive sampled-close drawdown magnitude.
+
+These are **underlying BTC price-index sensitivity diagnostics**, not grid returns or a reconstruction of grid equity. The historical return sequence cannot prove future probabilities. This original JavaScript adaptation is inspired by [PyBroker bootstrap evaluation](https://www.pybroker.com/en/latest/notebooks/3.%20Evaluating%20with%20Bootstrap%20Metrics.html); it uses percentile block resampling, not PyBroker's per-bar BCa procedure. Cached figures have no resampling output.
+
+Run the regression suite using Node.js 24:
+
+```sh
+node --test tests/*.test.cjs
+```

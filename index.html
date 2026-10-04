@@ -769,6 +769,8 @@
 
   <!-- ===== COMPARE & STATS TAB ===== -->
   <div id="tab-compare" class="tabpanel" role="tabpanel">
+    <div class="panel"><h2>BTC Price-Index Robustness</h2><p class="note" id="priceRobustness" aria-live="polite">Waiting for hourly feed.</p></div>
+
 
     <div class="panel">
       <h2>Closed vs. Ongoing</h2>
@@ -843,6 +845,7 @@
 
 </div>
 
+<script src="price-stats.js"></script>
 <script>
   // ---- privacy: always hidden, no toggle. Underlying $ figures stay in data-usd
   // attributes in the source but are never rendered — only % is shown. ----
@@ -900,8 +903,8 @@
     el.dataset.pct = pctStr;
     el.textContent = hidden ? pctStr : usdStr;
   }
-  function fmt(n, dp){ dp = dp===undefined?2:dp; const s = n.toFixed(dp); return (n>=0?'+':'') + s; }
-  function fmtPlain(n, dp){ dp = dp===undefined?2:dp; return n.toFixed(dp); }
+  function fmt(n, dp){ dp = dp===undefined?2:dp; if(!Number.isFinite(n)) return "—"; const s = n.toFixed(dp); return (n>=0?'+':'') + s; }
+  function fmtPlain(n, dp){ dp = dp===undefined?2:dp; return Number.isFinite(n) ? n.toFixed(dp) : "—"; }
 
   // ---- fixed source-of-truth constants (from exchange screenshots) ----
   const INVESTMENT = 909.60;
@@ -929,10 +932,7 @@
   };
 
   function nearestValue(sortedKeys, dataObj, targetKey){
-    if(dataObj[targetKey] !== undefined) return dataObj[targetKey];
-    let lo=0, hi=sortedKeys.length-1;
-    while(lo<hi){ const mid=(lo+hi)>>1; if(sortedKeys[mid] < targetKey) lo=mid+1; else hi=mid; }
-    return dataObj[sortedKeys[lo]];
+    return PriceStats.anchor(sortedKeys, dataObj, targetKey);
   }
 
   // ---- grid-aware scenario lab ----
@@ -1093,12 +1093,21 @@
     document.getElementById('statAlpha').textContent = fmt(alpha)+' pts';
     document.getElementById('statAlphaInline').textContent = fmtPlain(Math.abs(alpha),1)+' points';
 
+    const research = document.getElementById('priceRobustness');
+    if (v.robustness?.available) {
+      const r = v.robustness;
+      research.textContent = `BTC price-index sensitivity: ${r.paths.toLocaleString()} seeded ${r.blockHours}-hour block resamples · return percentile range ${fmt(r.returnLow)}% to ${fmt(r.returnHigh)}% · 95th percentile sampled close drawdown ${fmtPlain(r.drawdown95)}%. ${v.n.toLocaleString()}/${v.expectedHours.toLocaleString()} adjacent hourly returns; ${v.gaps} gaps excluded. ${r.eligibleReturns}/${r.sampledHours} returns eligible for full blocks. Sampled horizon ${r.sampledHours} hours. This is underlying BTC risk, not grid ROI, grid equity drawdown, a BCa interval, or a future probability.`;
+    } else {
+      research.textContent = v.robustness ? 'BTC resampling unavailable: '+v.robustness.reason : 'Resampling requires the live hourly feed; unavailable for cached figures.';
+    }
     apply(); // re-apply privacy toggle state to newly written figures
   }
 
   function computeFromData(data){
+    data = PriceStats.normalize(data);
     const keys = Object.keys(data).sort();
     const lastKey = keys[keys.length-1];
+    if (lastKey < GRID_KEY_STOP) throw new Error("Feed does not reach the stop date");
     const currentPrice = data[lastKey];
     const latestDT = new Date(lastKey+'Z');
     const stopFeedPrice = nearestValue(keys, data, GRID_KEY_STOP);
@@ -1117,35 +1126,14 @@
     const totalDaysOpen = DURATION_DAYS_CLOSED + Math.max(0, extraDays);
     const newAnnualized = newTotalPct * (365 / totalDaysOpen);
 
-    // grid-period stats
-    const gridPrices = keys.filter(k => k >= GRID_KEY_START && k <= GRID_KEY_STOP).map(k => data[k]);
-    let peak = gridPrices[0], maxDD = 0;
-    for(const p of gridPrices){ if(p > peak) peak = p; const dd = (p - peak)/peak; if(dd < maxDD) maxDD = dd; }
-    const rets = [];
-    for(let i=1;i<gridPrices.length;i++) rets.push(Math.log(gridPrices[i]/gridPrices[i-1]));
-    const n = rets.length;
-    const meanR = rets.reduce((a,b)=>a+b,0)/n;
-    const m2 = rets.reduce((a,b)=>a+(b-meanR)**2,0)/n;
-    const m3 = rets.reduce((a,b)=>a+(b-meanR)**3,0)/n;
-    const m4 = rets.reduce((a,b)=>a+(b-meanR)**4,0)/n;
-    const varSample = rets.reduce((a,b)=>a+(b-meanR)**2,0)/(n-1);
-    const vol = Math.sqrt(varSample) * Math.sqrt(24*365) * 100;
-    const skew = m3/Math.pow(m2,1.5);
-    const kurt = m4/(m2*m2) - 3;
+    // BTC price-index risk uses adjacent hourly bars only.
+    const stats = PriceStats.calculate(data, GRID_KEY_START, GRID_KEY_STOP);
     const buyHold = (stopFeedPrice - startFeedPrice)/startFeedPrice*100;
-    const sortedRets = [...rets].sort((a,b)=>a-b);
-    const varIndex = Math.floor(0.05*(sortedRets.length-1));
-    const var95 = sortedRets[varIndex] * 100;
-    const tailRets = sortedRets.slice(0,varIndex+1);
-    const cvar95 = tailRets.reduce((a,b)=>a+b,0)/tailRets.length * 100;
-    const downsideVol = Math.sqrt(rets.filter(r=>r<0).reduce((a,r)=>a+r*r,0)/n) * Math.sqrt(24*365) * 100;
-    const worstHour = sortedRets[0] * 100;
 
     return {
       currentPrice, asOf: lastKey.replace('T',' ')+' UTC', pctSinceStop, extraDays, projectedPrice,
       newGridProfit, newFloat, newTotal, newTotalPct, newBalance, newAnnualized,
-      maxDD: maxDD*100, vol, skew, kurt, buyHold, n, var95, cvar95, downsideVol, worstHour,
-      rets, meanR, stdR: Math.sqrt(varSample), keys
+      ...stats, buyHold, keys
     };
   }
 
@@ -1217,6 +1205,10 @@
   // ---- return distribution histogram with normal overlay ----
   function buildHistogram(v){
     const rets = v.rets, meanR = v.meanR, stdR = v.stdR, n = rets.length;
+    if (!n || !Number.isFinite(stdR) || stdR < 1e-12) {
+      document.getElementById('histWrap').textContent = 'Flat hourly returns; a normal fit is undefined.';
+      document.getElementById('histAxis').textContent = '—'; return;
+    }
     const min = Math.min(...rets), max = Math.max(...rets);
     const bins = 27;
     const width = (max-min)/bins;
@@ -1261,8 +1253,9 @@
   fetch(RAW_URL)
     .then(r => { if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
     .then(data => {
-      LAST_DATA = data;
+      data = PriceStats.normalize(data);
       const v = computeFromData(data);
+      LAST_DATA = data;
       renderOngoingAndCompare(v);
       buildVisuals(v);
       const ageHours = Math.max(0,(Date.now()-new Date(Object.keys(data).sort().at(-1)+'Z'))/3600000);
